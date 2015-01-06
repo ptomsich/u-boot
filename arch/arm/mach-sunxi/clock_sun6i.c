@@ -121,11 +121,12 @@ void clock_set_pll1(unsigned int clk)
 	struct sunxi_ccm_reg * const ccm =
 		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 	const int p = 0;
-	int k = 1;
-	int m = 1;
+	int k = 2;
+	int m = 2;
 
 	if (clk > 1152000000) {
-		k = 2;
+		k = 4;
+		m = 2;
 	} else if (clk > 768000000) {
 		k = 3;
 		m = 2;
