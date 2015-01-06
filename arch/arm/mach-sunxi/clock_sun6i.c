@@ -89,6 +89,32 @@ void clock_init_uart(void)
 #endif
 }
 
+int clock_twi_onoff(int port, int state)
+{
+	struct sunxi_ccm_reg *const ccm =
+		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+
+	if (port > 3)
+		return -1;
+
+	/* set the apb clock gate for twi */
+	if (state)
+		setbits_le32(&ccm->apb2_gate,
+			     CLK_GATE_OPEN << (APB2_GATE_TWI_SHIFT+port));
+	else
+		clrbits_le32(&ccm->apb2_gate,
+			     CLK_GATE_OPEN << (APB2_GATE_TWI_SHIFT+port));
+
+	return 0;
+}
+
+static inline void wait_for_pll_lock(u32 *reg)
+{
+	do {
+		/* spin */
+	} while ((readl(reg) & CCM_PLLx_CTRL_LOCK) != CCM_PLLx_CTRL_LOCK);
+}
+
 #ifdef CONFIG_SPL_BUILD
 void clock_set_pll1(unsigned int clk)
 {
@@ -118,7 +144,8 @@ void clock_set_pll1(unsigned int clk)
 	writel(CCM_PLL1_CTRL_EN | CCM_PLL1_CTRL_P(p) |
 	       CCM_PLL1_CTRL_N(clk / (24000000 * k / m)) |
 	       CCM_PLL1_CTRL_K(k) | CCM_PLL1_CTRL_M(m), &ccm->pll1_cfg);
-	sdelay(200);
+
+	wait_for_pll_lock(&ccm->pll1_cfg);
 
 	/* Switch CPU to PLL1 */
 	writel(AXI_DIV_3 << AXI_DIV_SHIFT |
@@ -143,6 +170,8 @@ void clock_set_pll3(unsigned int clk)
 	writel(CCM_PLL3_CTRL_EN | CCM_PLL3_CTRL_INTEGER_MODE |
 	       CCM_PLL3_CTRL_N(clk / (24000000 / m)) | CCM_PLL3_CTRL_M(m),
 	       &ccm->pll3_cfg);
+
+	wait_for_pll_lock(&ccm->pll3_cfg);
 }
 
 void clock_set_pll5(unsigned int clk, bool sigma_delta_enable)
@@ -173,7 +202,7 @@ void clock_set_pll5(unsigned int clk, bool sigma_delta_enable)
 	       CCM_PLL5_CTRL_N(clk / (24000000 * k / m)) |
 	       CCM_PLL5_CTRL_K(k) | CCM_PLL5_CTRL_M(m), &ccm->pll5_cfg);
 
-	udelay(5500);
+	wait_for_pll_lock(&ccm->pll5_cfg);
 }
 
 #ifdef CONFIG_MACH_SUN6I

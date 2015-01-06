@@ -178,6 +178,8 @@ struct sunxi_ccm_reg {
 #define CPU_CLK_SRC_OSC24M		1
 #define CPU_CLK_SRC_PLL1		2
 
+#define CCM_PLLx_CTRL_LOCK              (0x1 << 28)
+
 #define CCM_PLL1_CTRL_M(n)		((((n) - 1) & 0x3) << 0)
 #define CCM_PLL1_CTRL_K(n)		((((n) - 1) & 0x3) << 4)
 #define CCM_PLL1_CTRL_N(n)		((((n) - 1) & 0x1f) << 8)
