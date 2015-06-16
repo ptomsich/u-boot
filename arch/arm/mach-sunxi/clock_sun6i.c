@@ -48,21 +48,10 @@ void clock_init_safe(void)
 	 */
 	sdelay(100000);
 
-	/* Reinitialise PLL1 (CPUX) to 408MHz */
-	clock_set_pll1(408000000);
-	/* Enable PLL6 at 600MHz */
-	clock_pll6_init();
-
 	writel(AHB1_ABP1_DIV_DEFAULT, &ccm->ahb1_apb1_div);
 
-	{
-	  /* Release GPIO clock gate and de-assert the GPIO reset */
-	  setbits_le32(0x01c20068, (1 << 5));
-	  /* Configure PH7 as an output */
-	  clrsetbits_le32(0x01C208fc, (0b111 << 28), (0b001 << 28));
-	  /* Output LOW on PH7 */
-	  clrbits_le32(0x01C2010c, (1 << 7));
-	}
+	/* Enable PLL6 at 600MHz */
+	clock_pll6_init();
 
 	writel(MBUS_CLK_DEFAULT, &ccm->mbus0_clk_cfg);
 	if (IS_ENABLED(CONFIG_MACH_SUN6I))
