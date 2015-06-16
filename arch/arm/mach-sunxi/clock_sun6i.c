@@ -37,11 +37,10 @@ void clock_init_safe(void)
 
 	clock_set_pll1(408000000);
 
-	writel(PLL6_CFG_DEFAULT, &ccm->pll6_cfg);
-	while (!(readl(&ccm->pll6_cfg) & CCM_PLL6_CTRL_LOCK))
-		;
-
 	writel(AHB1_ABP1_DIV_DEFAULT, &ccm->ahb1_apb1_div);
+
+	/* Enable PLL6 at 600MHz */
+	clock_pll6_init();
 
 	writel(MBUS_CLK_DEFAULT, &ccm->mbus0_clk_cfg);
 	if (IS_ENABLED(CONFIG_MACH_SUN6I))
@@ -206,6 +205,7 @@ void clock_set_pll5(unsigned int clk, bool sigma_delta_enable)
 	wait_for_pll_lock(&ccm->pll5_cfg);
 }
 
+<<<<<<< HEAD:arch/arm/mach-sunxi/clock_sun6i.c
 #ifdef CONFIG_MACH_SUN6I
 void clock_set_mipi_pll(unsigned int clk)
 {
@@ -246,6 +246,29 @@ done:
 	       CCM_MIPI_PLL_CTRL_M(best_m), &ccm->mipi_pll_cfg);
 }
 #endif
+
+void clock_pll6_init()
+{
+	struct sunxi_ccm_reg * const ccm =
+		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+
+	/* The A31 reference manual states, that "the PLL6 output
+	 * should be fixed to 600MHz, and is not recommended to be
+	 * modified.".
+	 *
+	 * We always configure this to N=25 and K=2 for 600Mhz:
+	 *	 600MHz = 24MHz x N(25) x K(2) / 2
+	 *
+	 * N.B.: The lowest 2 bits need to be writte 01b (0x1),
+	 *       as the fixed divider doesn't seem to be fixed.
+	 */
+	writel(CCM_PLL6_CTRL_EN | CCM_PLL6_CTRL_24M_OUT_EN |
+	       CCM_PLL6_CTRL_N(25) | CCM_PLL6_CTRL_K(2) |
+	       CCM_PLL6_CTRL_M(2),
+	       &ccm->pll6_cfg);
+
+	wait_for_pll_lock(&ccm->pll6_cfg);
+}
 
 #if defined(CONFIG_MACH_SUN8I_A33) || defined(CONFIG_MACH_SUN50I)
 void clock_set_pll11(unsigned int clk, bool sigma_delta_enable)

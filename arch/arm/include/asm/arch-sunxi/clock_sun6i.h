@@ -202,8 +202,6 @@ struct sunxi_ccm_reg {
 #define CCM_PLL5_CTRL_SIGMA_DELTA_EN	(0x1 << 24)
 #define CCM_PLL5_CTRL_EN		(0x1 << 31)
 
-#define PLL6_CFG_DEFAULT		0x90041811 /* 600 MHz */
-
 #define CCM_PLL6_CTRL_N_SHIFT		8
 #define CCM_PLL6_CTRL_N_MASK		(0x1f << CCM_PLL6_CTRL_N_SHIFT)
 #define CCM_PLL6_CTRL_K_SHIFT		4
@@ -221,6 +219,12 @@ struct sunxi_ccm_reg {
 #define CCM_MIPI_PLL_CTRL_N(n)		((((n) - 1) & 0xf) << 8)
 #define CCM_MIPI_PLL_CTRL_LDO_EN	(0x3 << 22)
 #define CCM_MIPI_PLL_CTRL_EN		(0x1 << 31)
+
+#define CCM_PLL6_CTRL_M(n)              ((((n) - 1) & 0x3) << 0)
+#define CCM_PLL6_CTRL_K(n)              ((((n) - 1) & 0x3) << 4)
+#define CCM_PLL6_CTRL_N(n)              ((((n) - 1) & 0x1f) << 8)
+#define CCM_PLL6_CTRL_24M_OUT_EN        (0x1 << 18)
+#define CCM_PLL6_CTRL_EN                (0x1 << 31)
 
 #define CCM_PLL11_CTRL_N(n)		((((n) - 1) & 0x3f) << 8)
 #define CCM_PLL11_CTRL_SIGMA_DELTA_EN	(0x1 << 24)
@@ -427,6 +431,7 @@ struct sunxi_ccm_reg {
 void clock_set_pll1(unsigned int hz);
 void clock_set_pll3(unsigned int hz);
 void clock_set_pll5(unsigned int clk, bool sigma_delta_enable);
+void clock_pll6_init(void);
 void clock_set_pll11(unsigned int clk, bool sigma_delta_enable);
 void clock_set_mipi_pll(unsigned int hz);
 unsigned int clock_get_pll3(void);
