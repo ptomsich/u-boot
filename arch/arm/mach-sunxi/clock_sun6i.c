@@ -215,6 +215,13 @@ void clock_set_pll5(unsigned int clk, bool sigma_delta_enable)
 	       CCM_PLL5_CTRL_N(clk / (24000000 * k / m)) |
 	       CCM_PLL5_CTRL_K(k) | CCM_PLL5_CTRL_M(m), &ccm->pll5_cfg);
 
+	setbits_le32(&ccm->pll5_cfg, CCM_PLL5_CTRL_UPD);
+
+       /* On PLL5, the update needs first to take effect (i.e. CCM_PLL5_CTRL_UPD
+	* must auto-clear... and only then we can wait for the PLL to lock.  */
+	while (readl(&ccm->pll5_cfg) & CCM_PLL5_CTRL_UPD)
+	  /* spin */ ;
+
 	wait_for_pll_lock(&ccm->pll5_cfg);
 }
 
