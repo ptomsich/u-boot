@@ -679,6 +679,13 @@
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
+			i2c3_pins_a: i2c3@0 {
+				allwinner,pins = "PB5", "PB6";
+				allwinner,function = "i2c3";
+				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+			};
+
 			mmc0_pins_a: mmc0@0 {
 				allwinner,pins = "PF0", "PF1", "PF2",
 						 "PF3", "PF4", "PF5";
@@ -720,6 +727,14 @@
 						 "PC24";
 				allwinner,function = "mmc3";
 				allwinner,drive = <SUN4I_PINCTRL_40_MA>;
+				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+			};
+
+			mmc2_pins_a: mmc2@0 {
+				allwinner,pins = "PC6","PC7","PC8","PC9","PC10","PC11",
+						"PC12","PC13","PC14","PC15";
+				allwinner,function = "mmc2";
+				allwinner,drive = <SUN4I_PINCTRL_30_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
