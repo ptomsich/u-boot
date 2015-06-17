@@ -36,7 +36,8 @@ void p2wi_init(void)
 
 	/* Reset p2wi controller and set clock to CLKIN(12)/8 = 1.5 MHz */
 	writel(P2WI_CTRL_RESET, &p2wi->ctrl);
-	sdelay(0x100);
+	while (readl(&p2wi->ctrl) & P2WI_CTRL_RESET)
+	  /* spin */;
 	writel(P2WI_CC_SDA_OUT_DELAY(1) | P2WI_CC_CLK_DIV(8),
 	       &p2wi->cc);
 }
