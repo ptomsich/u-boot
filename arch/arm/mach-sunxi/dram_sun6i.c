@@ -33,7 +33,13 @@ static void mctl_sys_init(void)
 		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 	const int dram_clk_div = 2;
 
-	clock_set_pll5(DRAM_CLK * dram_clk_div, false);
+	clock_set_pll5(DRAM_CLK * dram_clk_div, true);
+
+	/* TODO: investigate whether the increased mdelay is related to enabling
+	 *       sigma-delta above.  If so, we might as well increase the value
+	 *       in the PLL lock-time register.
+	 */
+	mdelay(20);
 
 	clrsetbits_le32(&ccm->dram_clk_cfg, CCM_DRAMCLK_CFG_DIV0_MASK,
 		CCM_DRAMCLK_CFG_DIV0(dram_clk_div) | CCM_DRAMCLK_CFG_RST |
