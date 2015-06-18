@@ -243,7 +243,7 @@ static void mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
 	writel(MCTL_TDPD, &mctl_ctl->tdpd);
 
 	/* Unknown magic performed by boot0 */
-	setbits_le32(&mctl_ctl->dfiodtcfg, 1 << 3);
+	setbits_le32(&mctl_ctl->dfiodtcfg, 1 << 3 | 1 << 14); /* rank0_odt_write_sel */
 	clrbits_le32(&mctl_ctl->dfiodtcfg1, 0x1f);
 
 	/* Select 16/32-bits mode for MCTL */
