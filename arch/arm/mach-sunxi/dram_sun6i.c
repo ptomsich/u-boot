@@ -363,6 +363,7 @@ unsigned long sunxi_dram_init(void)
 	}
 
 	setbits_le32(&mctl_com->ccr, MCTL_CCR_MASTER_CLK_EN);
+	udelay(200);
 
 	mctl_channel_init(0, &para);
 	if (para.chan == 2)
