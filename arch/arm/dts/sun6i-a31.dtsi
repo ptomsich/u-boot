@@ -1180,7 +1180,7 @@
 		data-width = <24>;
 		hpd = <1>;
 		hpd_delay = <500>;
-		status = "okay";
+		status = "disabled";
 
 		display-timings {
 			timing0 {
@@ -1200,7 +1200,7 @@
 		clocks = <&pll6>;
 		clock-names = "lvds_pll";
 		clock-phase = <2>;
-		status = "okay";
+		status = "disabled";
 
 		pins {
 			power-enable = "PD21";
