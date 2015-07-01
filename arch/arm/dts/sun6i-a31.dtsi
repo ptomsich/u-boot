@@ -1172,4 +1172,83 @@
 			#size-cells = <0>;
 		};
 	};
+
+	hdmi0: hdmi@01c16000 {
+		compatible = "allwinner,sun6i-a31-hdmi";
+		reg = <0x01c16000 0x00040000>;
+		interrupts = <0 75 0x04>;
+		data-width = <24>;
+		hpd = <1>;
+		hpd_delay = <500>;
+		status = "okay";
+
+		display-timings {
+			timing0 {
+				/* 1920x1080p24 */
+				hactive = <1920>;
+				vactive = <1080>;
+				refresh = <60>;
+			};
+		};
+	};
+
+	ldb0: ldb@01c0c000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x01c0c000 0x400>;
+		compatible = "allwinner,sun6i-a31-ldb";
+		clocks = <&pll6>;
+		clock-names = "lvds_pll";
+		clock-phase = <2>;
+		status = "okay";
+
+		pins {
+			power-enable = "PD21";
+			panel-reset;
+			bl-enable = "PD20";
+			bl-pwm = "PH13";
+		};
+
+		lvds-channel@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			data-mapping = "ns";
+			data-width = <24>;
+
+			display-timings {
+				timing0 {
+					/* 1024x600p24 */
+					clock-frequency = <51000000>;
+					hactive = <1024>;
+					vactive = <600>;
+					hback-porch = <140 160 180>;
+					hfront-porch = <160>;
+					hsync-len = <10>;
+					vback-porch = <10 20 25>;
+					vfront-porch = <15>;
+					vsync-len = <3>;
+					hsync-active = <1>;
+					vsync-active = <1>;
+				};
+			};
+
+			port@0 {
+				reg = <0>;
+
+				lvds0_out: endpoint {
+					remote-endpoint = <&panel_in>;
+				};
+			};
+		};
+	};
+
+	panel0: lvds-panel {
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&lvds0_out>;
+			};
+		};
+	};
+
 };

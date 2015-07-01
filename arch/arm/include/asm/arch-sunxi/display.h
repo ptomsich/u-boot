@@ -379,6 +379,8 @@ struct sunxi_tve_reg {
 #endif
 #define SUNXI_LCDC_TCON0_LVDS_INTF_BITWIDTH(n)	((n) << 26)
 #define SUNXI_LCDC_TCON0_LVDS_INTF_ENABLE	(1 << 31)
+#define SUNXI_LCDC_TCON0_LVDS_INTF_NS		0 // (0 << 27)
+#define SUNXI_LCDC_TCON0_LVDS_INTF_JEIDA	(1 << 27)
 #define SUNXI_LCDC_TCON0_IO_POL_DCLK_PHASE(x)	((x) << 28)
 #define SUNXI_LCDC_TCON1_CTRL_CLK_DELAY(n)	(((n) & 0x1f) << 4)
 #define SUNXI_LCDC_TCON1_CTRL_INTERLACE_ENABLE	(1 << 20)

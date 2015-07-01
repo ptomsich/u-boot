@@ -432,6 +432,14 @@ config VIDEO_TEGRA124
 	   enables this support which can be used on devices which
 	   have an eDP display connected.
 
+config VIDEO_SUNXI_DM
+	bool "Enable video support on Allwinner SoCs"
+	help
+	   Allwinner boards support HDMI, LVDS and VGA output. For now, only
+	   HDMI and LVDS are supported in the U-Boot driver model. This option
+	   enables HDMI and LVDS support, which can be configured from the
+	   device tree.
+
 source "drivers/video/bridge/Kconfig"
 
 config VIDEO

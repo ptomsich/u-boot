@@ -288,7 +288,10 @@ extern int soft_i2c_gpio_scl;
 /* Do we want to initialize a simple FB? */
 #define CONFIG_VIDEO_DT_SIMPLEFB
 
+/* Fallback to old sunxi_video if the driver model video driver is disabled */
+#ifndef CONFIG_VIDEO_SUNXI_DM
 #define CONFIG_VIDEO_SUNXI
+#endif
 
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_VIDEO_BMP_LOGO
