@@ -445,7 +445,7 @@ int device_get_global_by_of_offset(int of_offset, struct udevice **devp);
 int device_find_first_child(struct udevice *parent, struct udevice **devp);
 
 /**
- * device_find_next_child() - Find the next child of a device
+ * device_find_next_child() - Find the next child of parent device
  *
  * @devp: Pointer to previous child device on entry. Returns pointer to next
  *		child device, or NULL if none
