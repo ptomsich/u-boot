@@ -54,6 +54,10 @@
 	aliases {
 		serial0 = &uart0;
 		serial2 = &uart2;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		spi2 = &spi2;
+		spi3 = &spi3;
 	};
 
 	chosen {
@@ -130,6 +134,14 @@
 		cooling-max-state = <9>;
 		#cooling-cells = <2>;
 	};
+};
+
+&spi0 {
+	status = "okay";
+};
+
+&spi1 {
+	status = "okay";
 };
 
 &ir {

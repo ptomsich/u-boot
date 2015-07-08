@@ -124,6 +124,13 @@ config SANDBOX_SPI
 		};
 	  };
 
+config SUNXI_SPI
+	bool "sunxi SPI driver"
+	help
+	  Enable the sunxi SPI driver. This driver can be used to
+	  access the SPI NOR flash on platforms embedding the Allwinner
+	  sunxi SoC.
+
 config TEGRA114_SPI
 	bool "nVidia Tegra114 SPI driver"
 	help
