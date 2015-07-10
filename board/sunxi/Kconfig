@@ -318,15 +318,6 @@ config SYS_CONFIG_NAME
 	default "sun9i" if MACH_SUN9I
 	default "sun50i" if MACH_SUN50I
 
-choice
-	prompt "Sunxi Board Variant"
-	optional
-
-config SUNXI_PANGOLIN
-	bool "Theobroma A31 uQ7 Board"
-
-endchoice
-
 config SYS_BOARD
 	default "sunxi"
 
