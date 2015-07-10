@@ -33,6 +33,7 @@
 #include <nand.h>
 #include <net.h>
 #include <sy8106a.h>
+#include <miiphy.h>
 
 #if defined CONFIG_VIDEO_LCD_PANEL_I2C && !(defined CONFIG_SPL_BUILD)
 /* So that we can use pin names in Kconfig and sunxi_name_to_gpio() */
@@ -113,6 +114,13 @@ int board_init(void)
 	}
 #endif /* !CONFIG_ARM64 */
 
+	gpio_request(SUNXI_GPA(7), "PHY Reset");
+	sunxi_gpio_set_cfgpin(SUNXI_GPA(7), SUNXI_GPIO_OUTPUT);
+
+	gpio_direction_output(SUNXI_GPA(7), 0);
+	mdelay(10);
+	gpio_direction_output(SUNXI_GPA(7), 1);
+
 	ret = axp_gpio_init();
 	if (ret)
 		return ret;
@@ -128,6 +136,7 @@ int board_init(void)
 
 	/* Uses dm gpio code so do this here and not in i2c_init_board() */
 	return soft_i2c_board_init();
+
 }
 
 int dram_init(void)
@@ -617,6 +626,18 @@ static void parse_spl_header(const uint32_t spl_addr)
 	setenv_hex("fel_scriptaddr", spl->fel_script_address);
 }
 
+int last_stage_init(void)
+{
+	static const char miiname[] = "ethernet@01c30000";
+	/* enables TXC and RXC skew on the Micrel PHY */
+	miiphy_write(miiname,0x4,0xd,0x2);
+	miiphy_write(miiname,0x4,0xe,0x8);
+	miiphy_write(miiname,0x4,0xd,0x4002);
+	miiphy_write(miiname,0x4,0xe,0x3de);
+	return 0;
+}
+
+#ifdef CONFIG_MISC_INIT_R
 /*
  * Note this function gets called multiple times.
  * It must not make any changes to env variables which already exist.
