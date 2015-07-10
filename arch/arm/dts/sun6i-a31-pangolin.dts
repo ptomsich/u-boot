@@ -59,11 +59,6 @@
 	chosen {
 		stdout-path = "serial2:115200n8";
 	};
-
-	wifi_pwrseq: wifi_pwrseq {
-		compatible = "mmc-pwrseq-simple";
-		reset-gpios = <&pio 6 10 GPIO_ACTIVE_LOW>; /* PG10 */
-	};
 };
 
 &ehci0 {
