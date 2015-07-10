@@ -120,6 +120,8 @@ int board_init(void)
 	sunxi_gpio_set_cfgpin(SUNXI_GPC(26), SUNXI_GPIO_OUTPUT);
 	gpio_request(SUNXI_GPA(7), "PHY Reset");
 	sunxi_gpio_set_cfgpin(SUNXI_GPA(7), SUNXI_GPIO_OUTPUT);
+	gpio_request(SUNXI_GPH(7), "LED");
+	sunxi_gpio_set_cfgpin(SUNXI_GPH(7), SUNXI_GPIO_OUTPUT);
 
 	gpio_direction_output(SUNXI_GPC(3), 0);
 	gpio_direction_output(SUNXI_GPC(26), 0);
@@ -127,6 +129,16 @@ int board_init(void)
 	mdelay(10);
 	gpio_direction_output(SUNXI_GPC(26), 1);
 	gpio_direction_output(SUNXI_GPA(7), 1);
+
+	// Blink LED
+	int i;
+	for(i=0;i<=2;i++)
+	{
+		mdelay(30);
+		gpio_direction_output(SUNXI_GPH(7), 0);
+		mdelay(30);
+		gpio_direction_output(SUNXI_GPH(7), 1);
+	}
 
 	ret = axp_gpio_init();
 	if (ret)
