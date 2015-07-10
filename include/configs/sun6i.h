@@ -24,6 +24,11 @@
 #define CONFIG_ARMV7_SECURE_BASE	SUNXI_SRAM_B_BASE
 #define CONFIG_ARMV7_SECURE_MAX_SIZE    (64 * 1024) /* 64 KB */
 
+#ifdef CONFIG_SUNXI_PANGOLIN
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_STMICRO
+#endif
+
 /*
  * Include common sunxi configuration where most the settings are
  */

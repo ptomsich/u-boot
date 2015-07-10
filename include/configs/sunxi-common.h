@@ -142,6 +142,23 @@
 #ifdef CONFIG_MMC
 #define CONFIG_GENERIC_MMC
 #define CONFIG_MMC_SUNXI_SLOT		0
+#ifdef CONFIG_SUNXI_PANGOLIN
+#ifdef CONFIG_SUNXI_ENV_MMC
+#define CONFIG_ENV_IS_IN_MMC
+#define CONFIG_SYS_MMC_ENV_DEV		0	/* first detected MMC controller */
+#define CONFIG_ENV_OFFSET		(544 << 10) /* (8 + 24 + 512) KiB */
+#endif
+#ifdef CONFIG_SUNXI_ENV_SPI
+#define CONFIG_ENV_IS_IN_SPI_FLASH
+#define CONFIG_ENV_SECT_SIZE	(64 * 1024)
+#define CONFIG_ENV_SPI				0
+#define	CONFIG_ENV_SPI_CS			0
+#define CONFIG_ENV_SPI_MAX_HZ	16000000
+#define CONFIG_ENV_OFFSET			0
+#endif
+#endif
+#else
+#define CONFIG_ENV_OFFSET		(544 << 10) /* (8 + 24 + 512) KiB */
 #define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		0	/* first detected MMC controller */
 #define CONFIG_SYS_MMC_MAX_DEVICE	4
@@ -175,7 +192,6 @@
 
 #define CONFIG_SYS_MONITOR_LEN		(768 << 10)	/* 768 KiB */
 
-#define CONFIG_ENV_OFFSET		(544 << 10) /* (8 + 24 + 512) KiB */
 #define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB */
 
 #define CONFIG_FAT_WRITE	/* enable write access */

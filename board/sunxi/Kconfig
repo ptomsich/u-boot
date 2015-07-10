@@ -163,6 +163,31 @@ config DRAM_TYPE
 	---help---
 	Set the dram type, 3: DDR3, 7: LPDDR3
 
+choice
+	prompt "Sunxi Board Variant"
+	optional
+
+config SUNXI_PANGOLIN
+	bool "Theobroma A31 uQ7 Board"
+	select DM_SPI
+	select DM_SPI_FLASH
+	select CMD_SF
+
+endchoice
+
+choice
+	prompt "U-Boot environment location"
+	depends on SUNXI_PANGOLIN
+	default SUNXI_ENV_MMC
+
+config SUNXI_ENV_MMC
+	bool "MMC/SD-Card"
+
+config SUNXI_ENV_SPI
+	bool "SPI"
+
+endchoice
+
 config DRAM_CLK
 	int "sunxi dram clock speed"
 	default 792 if MACH_SUN9I
@@ -292,15 +317,6 @@ config SYS_CONFIG_NAME
 	default "sun8i" if MACH_SUN8I
 	default "sun9i" if MACH_SUN9I
 	default "sun50i" if MACH_SUN50I
-
-choice
-	prompt "Sunxi Board Variant"
-	optional
-
-config SUNXI_PANGOLIN
-	bool "Theobroma A31 uQ7 Board"
-
-endchoice
 
 config SYS_BOARD
 	default "sunxi"
