@@ -114,11 +114,18 @@ int board_init(void)
 	}
 #endif /* !CONFIG_ARM64 */
 
+	gpio_request(SUNXI_GPC(3), "STM32 Boot0");
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(3), SUNXI_GPIO_OUTPUT);
+	gpio_request(SUNXI_GPC(26), "STM32 Reset");
+	sunxi_gpio_set_cfgpin(SUNXI_GPC(26), SUNXI_GPIO_OUTPUT);
 	gpio_request(SUNXI_GPA(7), "PHY Reset");
 	sunxi_gpio_set_cfgpin(SUNXI_GPA(7), SUNXI_GPIO_OUTPUT);
 
+	gpio_direction_output(SUNXI_GPC(3), 0);
+	gpio_direction_output(SUNXI_GPC(26), 0);
 	gpio_direction_output(SUNXI_GPA(7), 0);
 	mdelay(10);
+	gpio_direction_output(SUNXI_GPC(26), 1);
 	gpio_direction_output(SUNXI_GPA(7), 1);
 
 	ret = axp_gpio_init();
