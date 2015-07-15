@@ -42,7 +42,6 @@ config SUNXI_GEN_SUN6I
 	separate ahb reset control registers, custom pmic bus, new style
 	watchdog, etc.
 
-
 choice
 	prompt "Sunxi SoC Variant"
 	optional
@@ -293,6 +292,15 @@ config SYS_CONFIG_NAME
 	default "sun8i" if MACH_SUN8I
 	default "sun9i" if MACH_SUN9I
 	default "sun50i" if MACH_SUN50I
+
+choice
+	prompt "Sunxi Board Variant"
+	optional
+
+config SUNXI_PANGOLIN
+	bool "Theobroma A31 uQ7 Board"
+
+endchoice
 
 config SYS_BOARD
 	default "sunxi"
