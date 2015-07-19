@@ -26,7 +26,12 @@ static u8 axp221_mvolt_to_cfg(int mvolt, int min, int max, int div)
 	return (mvolt - min) / div;
 }
 
-int axp_set_dcdc1(unsigned int mvolt)
+int axp221_write(u8 reg, u8 val)
+{
+	return pmic_bus_write(reg, val);
+}
+
+int axp221_set_dcdc1(unsigned int mvolt)
 {
 	int ret;
 	u8 cfg = axp221_mvolt_to_cfg(mvolt, 1600, 3400, 100);

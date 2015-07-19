@@ -543,6 +543,25 @@ void sunxi_board_init(void)
 #endif
 #ifdef CONFIG_AXP209_POWER
 	power_failed |= axp_set_aldo4(CONFIG_AXP_ALDO4_VOLT);
+	power_failed |= axp209_init();
+	power_failed |= axp209_set_dcdc2(1400);
+	power_failed |= axp209_set_dcdc3(1250);
+	power_failed |= axp209_set_ldo2(3000);
+	power_failed |= axp209_set_ldo3(2800);
+	power_failed |= axp209_set_ldo4(2800);
+#endif
+#ifdef CONFIG_AXP221_POWER
+	power_failed = axp221_init();
+	power_failed |= axp221_write(0x8f,0x41);
+	power_failed |= axp221_write(0x30,0x66);
+	power_failed |= axp221_write(0x30,0x62);
+	power_failed |= axp221_set_dcdc1(CONFIG_AXP221_DCDC1_VOLT);
+	power_failed |= axp221_set_dcdc2(1200); /* A31:VDD-GPU, A23:VDD-SYS */
+	power_failed |= axp221_set_dcdc3(1200); /* VDD-CPU */
+#ifdef CONFIG_MACH_SUN6I
+	power_failed |= axp221_set_dcdc4(1200); /* A31:VDD-SYS */
+#else
+	power_failed |= axp221_set_dcdc4(0);    /* A23:unused */
 #endif
 
 #if defined(CONFIG_AXP221_POWER) || defined(CONFIG_AXP809_POWER) || \
