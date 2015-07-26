@@ -552,9 +552,24 @@ void sunxi_board_init(void)
 #endif
 #ifdef CONFIG_AXP221_POWER
 	power_failed = axp221_init();
-	power_failed |= axp221_write(0x8f,0x41);
-	power_failed |= axp221_write(0x30,0x66);
-	power_failed |= axp221_write(0x30,0x62);
+#ifdef CONFIG_SUNXI_PANGOLIN
+	/* Enable ATX power supply */
+	gpio_request(SUNXI_GPM(4), "SUS3");
+	sunxi_gpio_set_cfgpin(SUNXI_GPM(4),SUNXI_GPIO_OUTPUT);
+	gpio_direction_output(SUNXI_GPM(4),1);
+	/* Force VBUS power path disable current limit*/
+	power_failed |= axp221_write(0x30,0xE6);
+	/* wait for ATX power to be stable */
+	gpio_request(SUNXI_GPM(6),"PWGIN");
+	sunxi_gpio_set_cfgpin(SUNXI_GPM(6),SUNXI_GPIO_INPUT);
+	while(gpio_get_value(SUNXI_GPM(6))==0)
+	{
+		mdelay(100);
+	}
+	mdelay(500); /* let the power supply settle */
+	power_failed |= axp221_write(0x8f,0x41); /* AC-VBUS shorten */
+	power_failed |= axp221_write(0x30,0x62); /* disable force VBUS */
+#endif
 	power_failed |= axp221_set_dcdc1(CONFIG_AXP221_DCDC1_VOLT);
 	power_failed |= axp221_set_dcdc2(1200); /* A31:VDD-GPU, A23:VDD-SYS */
 	power_failed |= axp221_set_dcdc3(1200); /* VDD-CPU */
