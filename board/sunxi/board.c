@@ -388,6 +388,7 @@ int board_mmc_init(bd_t *bis)
 {
 	__maybe_unused struct mmc *mmc0, *mmc1;
 	__maybe_unused char buf[512];
+	__maybe_unused u32 val;
 
 	mmc_pinmux_setup(CONFIG_MMC_SUNXI_SLOT);
 	mmc0 = sunxi_mmc_init(CONFIG_MMC_SUNXI_SLOT);
@@ -402,6 +403,39 @@ int board_mmc_init(bd_t *bis)
 #endif
 
 #if !defined(CONFIG_SPL_BUILD) && CONFIG_MMC_SUNXI_SLOT_EXTRA == 2
+#if CONFIG_MACH_SUN6I
+	/*
+	 * the bootdevice is shown in VER_REG in the system controller
+	 * if U_boot is set then the ROM trys to boot from mmc0 regardless
+	 * of the BOOT_SEL pins.
+	 */
+	val = readl(0x1c00024);
+	if ((val & (1<<10))) /* check UBOOT_SEL */
+	{
+		switch((val & (3<<8))>>8) /* check BOOT_SEL pins */
+		{
+			case 0x0: /* SPI0 boot */
+				break;
+			case 0x1: /* eMMC2 boot */
+				/* Check if there is a boot loader on eMMC2
+				 * If not we want to fall back to SD card */
+				if (mmc_init(mmc1) == 0 &&
+				    mmc1->block_dev.block_read(1, 16, 1, buf) == 1) {
+					buf[12] = 0;
+					if (strcmp(&buf[4], "eGON.BT0") == 0) {
+						/* Boot loader found, swap to make eMMC the first device */
+						mmc0->block_dev.dev = 1;
+						mmc1->block_dev.dev = 0;
+					}
+				}
+				break;
+			case 0x2: /* SDC2 boot */
+				break;
+			case 0x3: /* NAND Flash boot */
+				break;
+		}
+	}
+#else
 	/*
 	 * On systems with an emmc (mmc2), figure out if we are booting from
 	 * the emmc and if we are make it "mmc dev 0" so that boot.scr, etc.
@@ -413,6 +447,7 @@ int board_mmc_init(bd_t *bis)
 		mmc0->block_dev.devnum = 1;
 		mmc1->block_dev.devnum = 0;
 	}
+#endif
 #endif
 
 	return 0;
