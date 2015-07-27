@@ -114,6 +114,7 @@ int board_init(void)
 	}
 #endif /* !CONFIG_ARM64 */
 
+#ifdef CONFIG_SUNXI_PANGOLIN
 	sunxi_gpio_set_cfgpin(SUNXI_GPG(10), SUN6I_GPG_USB3);
 	sunxi_gpio_set_cfgpin(SUNXI_GPG(11), SUN6I_GPG_USB3);
 
@@ -142,6 +143,7 @@ int board_init(void)
 		mdelay(30);
 		gpio_direction_output(SUNXI_GPH(7), 1);
 	}
+#endif
 
 	ret = axp_gpio_init();
 	if (ret)
@@ -719,12 +721,14 @@ static void parse_spl_header(const uint32_t spl_addr)
 
 int last_stage_init(void)
 {
+#ifdef CONFIG_SUNXI_PANGOLIN
 	static const char miiname[] = "ethernet@01c30000";
 	/* enables TXC and RXC skew on the Micrel PHY */
 	miiphy_write(miiname,0x4,0xd,0x2);
 	miiphy_write(miiname,0x4,0xe,0x8);
 	miiphy_write(miiname,0x4,0xd,0x4002);
 	miiphy_write(miiname,0x4,0xe,0x3de);
+#endif
 	return 0;
 }
 
