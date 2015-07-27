@@ -114,6 +114,9 @@ int board_init(void)
 	}
 #endif /* !CONFIG_ARM64 */
 
+	sunxi_gpio_set_cfgpin(SUNXI_GPG(10), SUN6I_GPG_USB3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPG(11), SUN6I_GPG_USB3);
+
 	gpio_request(SUNXI_GPC(3), "STM32 Boot0");
 	sunxi_gpio_set_cfgpin(SUNXI_GPC(3), SUNXI_GPIO_OUTPUT);
 	gpio_request(SUNXI_GPC(26), "STM32 Reset");
