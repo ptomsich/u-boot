@@ -193,6 +193,7 @@
 #define CONFIG_SYS_MONITOR_LEN		(768 << 10)	/* 768 KiB */
 
 #define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB */
+#define CONFIG_ENV_OVERWRITE
 
 #define CONFIG_FAT_WRITE	/* enable write access */
 
