@@ -39,6 +39,23 @@
 #define CONFIG_SYS_THUMB_BUILD	/* Thumbs mode to save space in SPL */
 #endif
 
+#include <asm/arch/cpu.h>	/* get chip and board defs */
+
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_DM_SERIAL)
+# define CONFIG_DW_SERIAL
+#endif
+
+/*
+ * Display CPU information
+ */
+#define CONFIG_DISPLAY_CPUINFO
+
+#ifdef CONFIG_SUNXI_PANGOLIN
+# define CONFIG_SYS_PROMPT	"a31 uq7 u-boot# "
+#else
+# define CONFIG_SYS_PROMPT	"sunxi# "
+#endif
+
 /* Serial & console */
 #define CONFIG_SYS_NS16550_SERIAL
 /* ns16550 reg in the low bits of cpu reg */
