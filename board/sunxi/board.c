@@ -719,53 +719,16 @@ static void parse_spl_header(const uint32_t spl_addr)
 }
 
 #ifdef CONFIG_MISC_INIT_R
+
+#if !defined(CONFIG_SUNXI_PANGOLIN)
 /*
  * Note this function gets called multiple times.
  * It must not make any changes to env variables which already exist.
  */
 static void setup_environment(const void *fdt)
 {
-	char serial_string[17] = { 0 };
-	uint8_t mac_addr[6];
-	char ethaddr[16];
-	int i, ret;
 	int ret;
-#ifdef CONFIG_SUNXI_PANGOLIN
-	struct mmc *mmc0;
-	struct sunxi_mmc_host {
-		unsigned mmc_no;
-		uint32_t *mclkreg;
-		unsigned fatal_err;
-		struct sunxi_mmc *reg;
-		struct mmc_config cfg;
-	};
-
-	mmc0 = find_mmc_device(1);
-
-	struct sunxi_mmc_host *mmchost = mmc0->priv;
-	/* lookup the real device number to get the eMMC */
-	if(mmchost->mmc_no != 2)
-		mmc0 = find_mmc_device(0);
-
-	if(mmc0->has_init==0)
-		mmc_init(mmc0);
-
-	if (!getenv("ethaddr")) {
-		/* Non OUI / registered MAC address */
-		mac_addr[0] = 0x02;
-		mac_addr[1] = (mmc0->cid[0] >> 24) & 0xff;
-		mac_addr[2] = (mmc0->cid[2] >> 0) & 0xff;
-		mac_addr[3] = (mmc0->cid[3] >> 24) & 0xff;
-		mac_addr[4] = (mmc0->cid[3] >> 16) & 0xff;
-		mac_addr[5] = (mmc0->cid[3] >> 8) & 0xff;
-
-		eth_setenv_enetaddr("ethaddr", mac_addr);
-	}
-
-	snprintf(serial_string, sizeof(serial_string), "%08x%02x%06x",
-	  mmc0->cid[0]>>24,mmc0->cid[2]&0xff,mmc0->cid[3]>>8);
-	setenv("serial#", serial_string);
-#else
+	uint8_t mac_addr[6];
 	unsigned int sid[4];
 
 	ret = sunxi_get_sid(sid);
@@ -823,6 +786,51 @@ static void setup_environment(const void *fdt)
 		}
 	}
 }
+#else
+/*
+ * Note this function gets called multiple times.
+ * It must not make any changes to env variables which already exist.
+ */
+static void setup_environment(const void *fdt)
+{
+	struct mmc *mmc0;
+	struct sunxi_mmc_host {
+		unsigned mmc_no;
+		uint32_t *mclkreg;
+		unsigned fatal_err;
+		struct sunxi_mmc *reg;
+		struct mmc_config cfg;
+	};
+
+	mmc0 = find_mmc_device(1);
+
+	struct sunxi_mmc_host *mmchost = mmc0->priv;
+	/* lookup the real device number to get the eMMC */
+	if(mmchost->mmc_no != 2)
+		mmc0 = find_mmc_device(0);
+
+	if(mmc0->has_init == 0)
+		mmc_init(mmc0);
+
+	if (!getenv("ethaddr")) {
+		/* Non OUI / registered MAC address */
+		mac_addr[0] = 0x02;
+		mac_addr[1] = (mmc0->cid[0] >> 24) & 0xff;
+		mac_addr[2] = (mmc0->cid[2] >> 0) & 0xff;
+		mac_addr[3] = (mmc0->cid[3] >> 24) & 0xff;
+		mac_addr[4] = (mmc0->cid[3] >> 16) & 0xff;
+		mac_addr[5] = (mmc0->cid[3] >> 8) & 0xff;
+
+		eth_setenv_enetaddr("ethaddr", mac_addr);
+	}
+
+	if (!getenv("serial#")) {
+		snprintf(serial_string, sizeof(serial_string), "%08x%02x%06x",
+			 mmc0->cid[0]>>24,mmc0->cid[2]&0xff,mmc0->cid[3]>>8);
+		setenv("serial#", serial_string);
+	}
+}
+#endif
 
 int misc_init_r(void)
 {
