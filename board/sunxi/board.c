@@ -34,6 +34,7 @@
 #include <net.h>
 #include <sy8106a.h>
 #include <miiphy.h>
+#include <command.h>
 
 #if defined CONFIG_VIDEO_LCD_PANEL_I2C && !(defined CONFIG_SPL_BUILD)
 /* So that we can use pin names in Kconfig and sunxi_name_to_gpio() */
@@ -879,3 +880,34 @@ int ft_board_setup(void *blob, bd_t *bd)
 #endif
 	return 0;
 }
+#endif /* CONFIG_OF_BOARD_SETUP */
+
+#ifdef CONFIG_SUNXI_PANGOLIN
+static int do_emmcboot(cmd_tbl_t *cmdtp, int flag, int argc,
+		char * const argv[])
+{
+  struct mmc *mmc0;
+	struct sunxi_mmc_host {
+		unsigned mmc_no;
+		uint32_t *mclkreg;
+		unsigned fatal_err;
+		struct sunxi_mmc *reg;
+		struct mmc_config cfg;
+	};
+
+  mmc0 = find_mmc_device(0);
+	/* lookup if first mmc device maps to the emmc */
+	struct sunxi_mmc_host *mmchost = mmc0->priv;
+	if(mmchost->mmc_no == 2)
+		return 0;
+	else
+		return 1;
+}
+
+U_BOOT_CMD(
+		emmcboot,   CONFIG_SYS_MAXARGS,     1,      do_emmcboot,
+		"returns true if booted from eMMC",
+		NULL
+		);
+#endif
+
