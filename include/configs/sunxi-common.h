@@ -51,7 +51,7 @@
 #define CONFIG_DISPLAY_CPUINFO
 
 #ifdef CONFIG_SUNXI_PANGOLIN
-# define CONFIG_SYS_PROMPT	"a31 uq7 u-boot# "
+# define CONFIG_SYS_PROMPT	"u-boot# "
 #else
 # define CONFIG_SYS_PROMPT	"sunxi# "
 #endif
