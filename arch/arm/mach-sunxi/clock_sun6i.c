@@ -48,10 +48,12 @@ void clock_init_safe(void)
 	 */
 	sdelay(100000);
 
-	writel(AHB1_ABP1_DIV_DEFAULT, &ccm->ahb1_apb1_div);
-
+	/* Reinitialise PLL1 (CPUX) to 408MHz */
+	clock_set_pll1(408000000);
 	/* Enable PLL6 at 600MHz */
 	clock_pll6_init();
+
+	writel(AHB1_ABP1_DIV_DEFAULT, &ccm->ahb1_apb1_div);
 
 	writel(MBUS_CLK_DEFAULT, &ccm->mbus0_clk_cfg);
 	if (IS_ENABLED(CONFIG_MACH_SUN6I))
