@@ -31,7 +31,7 @@ int axp221_write(u8 reg, u8 val)
 	return pmic_bus_write(reg, val);
 }
 
-int axp221_set_dcdc1(unsigned int mvolt)
+int axp_set_dcdc1(unsigned int mvolt)
 {
 	int ret;
 	u8 cfg = axp221_mvolt_to_cfg(mvolt, 1600, 3400, 100);
