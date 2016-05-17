@@ -425,12 +425,12 @@ int board_mmc_init(bd_t *bis)
 				/* Check if there is a boot loader on eMMC2
 				 * If not we want to fall back to SD card */
 				if (mmc_init(mmc1) == 0 &&
-				    mmc1->block_dev.block_read(1, 16, 1, buf) == 1) {
+				    mmc1->block_dev.block_read(&mmc1->block_dev, 16, 1, buf) == 1) {
 					buf[12] = 0;
 					if (strcmp(&buf[4], "eGON.BT0") == 0) {
 						/* Boot loader found, swap to make eMMC the first device */
-						mmc0->block_dev.dev = 1;
-						mmc1->block_dev.dev = 0;
+						mmc0->block_dev.devnum = 1;
+						mmc1->block_dev.devnum = 0;
 					}
 				}
 				break;
