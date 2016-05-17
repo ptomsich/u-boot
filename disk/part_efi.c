@@ -366,7 +366,7 @@ int write_gpt_table(struct blk_desc *dev_desc,
 	if (blk_dwrite(dev_desc, 1, 1, gpt_h) != 1)
 		goto err;
 
-	if (blk_dwrite(dev_desc, 2, pte_blk_cnt, gpt_e)
+	if (blk_dwrite(dev_desc, le64_to_cpu(gpt_h->partition_entry_lba), pte_blk_cnt, gpt_e)
 	    != pte_blk_cnt)
 		goto err;
 
@@ -499,9 +499,21 @@ int gpt_fill_header(struct blk_desc *dev_desc, gpt_header *gpt_h,
 	gpt_h->header_size = cpu_to_le32(sizeof(gpt_header));
 	gpt_h->my_lba = cpu_to_le64(1);
 	gpt_h->alternate_lba = cpu_to_le64(dev_desc->lba - 1);
-	gpt_h->first_usable_lba = cpu_to_le64(34);
 	gpt_h->last_usable_lba = cpu_to_le64(dev_desc->lba - 34);
+#if defined(CONFIG_EFI_PARTITION_ENTRIES_OFF)
+	/* Some architectures require their SPL loader at a fixed
+	 * address within the first 16KB of the disk.  To avoid an
+	 * overlap with the partition entries of the EFI partition
+	 * table, the first safe offset (in bytes, from the start of
+	 * the disk) for the entries can be set in
+	 * CONFIG_EFI_PARTITION_ENTRIES_OFF.
+	 */
+	gpt_h->partition_entry_lba = cpu_to_le64(PAD_TO_BLOCKSIZE(CONFIG_EFI_PARTITION_ENTRIES_OFF,
+								  dev_desc));
+#else
 	gpt_h->partition_entry_lba = cpu_to_le64(2);
+#endif
+	gpt_h->first_usable_lba = cpu_to_le64(le64_to_cpu(gpt_h->partition_entry_lba) + 32);
 	gpt_h->num_partition_entries = cpu_to_le32(GPT_ENTRY_NUMBERS);
 	gpt_h->sizeof_partition_entry = cpu_to_le32(sizeof(gpt_entry));
 	gpt_h->header_crc32 = 0;
