@@ -398,7 +398,6 @@ extern int soft_i2c_gpio_scl;
 #endif
 
 #define CONFIG_MISC_INIT_R
-#define CONFIG_LAST_STAGE_INIT
 #define CONFIG_SYS_CONSOLE_IS_IN_ENV
 
 #ifndef CONFIG_SPL_BUILD
