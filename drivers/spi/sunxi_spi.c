@@ -50,6 +50,258 @@ static int sunxi_spi_cs0_val[4] = {SUNXI_SPI0_CS0_VAL,
 static int sunxi_spi_cs1_val[4] = {SUNXI_SPI0_CS1_VAL,
 	SUNXI_SPI1_CS1_VAL, SUNXI_SPI2_CS1_VAL, SUNXI_SPI3_CS1_VAL};
 
+
+/* Common xfer-function used both by the DM and non-DM (e.g. SPL) interfaces */
+static int _sunxi_spi_xfer(struct sunxi_spi_reg* spi, unsigned int bitlen,
+			   const void *dout, void *din, unsigned long flags)
+{
+	int n_bytes = DIV_ROUND_UP(bitlen, 8);
+	int ret;
+	u32 blk_size, cnt;
+	u8 *p_outbuf = (u8*)dout;
+	u8 *p_inbuf = (u8*)din;
+	unsigned char* p;
+#ifdef CONFIG_SPL_BUILD
+	int i;
+
+	printf("_sunxi_spi_xfer %p\n", spi);
+#if 0
+	if (dout)
+	  {
+	    for (i = 0; i < n_bytes; ++i)
+	      printf("%02x ", p_outbuf[i]);
+	  }
+	printf("\n");
+#endif
+#endif
+	debug("%s: %p, %d, %p, %016lx\n", __func__, spi, bitlen, din, flags);
+
+	while (!(readl(&spi->ISR) & (1 << 1) /* RXFIFO empty */ ))
+		(void)readb(&spi->RXD);
+
+	if (flags & SPI_XFER_BEGIN) {
+		setbits_le32(&spi->TCR, (1 << 6));  // SS_OWNER
+		clrbits_le32(&spi->TCR, (1 << 7));  // SS_LEVEL
+	}
+
+	while (n_bytes>0) {
+		ret = 0;
+
+		if (n_bytes<MAX_SPI_BYTES)
+			blk_size = n_bytes;
+		else
+			blk_size = MAX_SPI_BYTES;
+
+		cnt = blk_size;
+
+		// start XCHG
+		writel(blk_size, &spi->MBC);
+		writel(blk_size, &spi->MTC);
+		writel(blk_size, &spi->BCC);
+
+		p = p_outbuf;
+		while (cnt--) {
+			writeb(*p++, &spi->TXD);
+		}
+
+		setbits_le32(&spi->TCR, (1 << 31)); // XCHG bit
+
+		while (readl(&spi->TCR) & (1 << 31))
+			/* wait for the xfer to complete */;
+
+		setbits_le32(&spi->ISR, (1 << 12)); // clear TC
+		cnt = blk_size;
+
+		p = p_inbuf;
+		while (cnt--) {
+			unsigned char c;
+			c = readb(&spi->RXD);
+			if (din) {
+				*p++ = c;
+			}
+		}
+
+		if (ret)
+			return ret;
+		if (dout)
+			p_outbuf += blk_size;
+		if (din)
+			p_inbuf += blk_size;
+		n_bytes -= blk_size;
+	}
+
+	if (flags & SPI_XFER_END) {
+		setbits_le32(&spi->TCR, (1 << 6));  // SS_OWNER
+		setbits_le32(&spi->TCR, (1 << 7));  // SS_LEVEL
+	}
+	udelay(1);
+
+#ifdef CONFIG_SPL_BUILD
+#if 0
+	{
+	  n_bytes = DIV_ROUND_UP(bitlen, 8);
+	  if (din)
+	    {
+	      p_inbuf = (u8*)din;
+	      printf("<- ");
+	      for (i = 0; i < n_bytes; ++i)
+		printf("%02x ", p_inbuf[i]);
+	    }
+	  printf("\n");
+	}
+#endif
+#endif
+
+	return 0;
+};
+
+#if !defined(CONFIG_DM_SPI)
+struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
+				     unsigned int max_hz, unsigned int mode)
+{
+        struct sunxi_spi_privdata *priv;
+	printf("sunxi:spi_setup_slave\n");
+	priv = spi_alloc_slave(struct sunxi_spi_privdata, bus, cs);
+
+	priv->base = SUNXI_SPI0_BASE;
+
+	return &priv->slave;
+}
+
+int spi_claim_bus(struct spi_slave *slave)
+{
+	struct sunxi_ccm_reg* const ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+	struct sunxi_spi_reg* spi = (struct sunxi_spi_reg *)SUNXI_SPI0_BASE;
+	int seq = 0; /* which SPI controller ? */
+	int cs = 0; /* which CS */
+	int clk_div_m = 0;
+	int clk_div_n = 0;
+
+	printf("sunxi:spi_claim_bus\n");
+
+	sunxi_gpio_set_cfgpin(sunxi_spi_mosi_pin[seq], sunxi_spi_mosi_val[seq]);
+	sunxi_gpio_set_cfgpin(sunxi_spi_miso_pin[seq], sunxi_spi_miso_val[seq]);
+	sunxi_gpio_set_cfgpin(sunxi_spi_clk_pin[seq], sunxi_spi_clk_val[seq]);
+	if (cs == 0)
+		sunxi_gpio_set_cfgpin(sunxi_spi_cs0_pin[seq], sunxi_spi_cs0_val[seq]);
+	else
+		sunxi_gpio_set_cfgpin(sunxi_spi_cs1_pin[seq], sunxi_spi_cs1_val[seq]);
+
+	/* Reset FIFOs */
+	setbits_le32(&spi->FCR, (1 << 31) | (1 << 15));
+
+	switch (seq) {
+		case 0:
+			setbits_le32(&ccm->spi0_clk_cfg,
+				     (clk_div_m << 0) | (clk_div_n << 16));
+			setbits_le32(&ccm->spi0_clk_cfg, (1 << 31));
+			setbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI0);
+			setbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI0);
+			break;
+		case 1:
+			setbits_le32(&ccm->spi1_clk_cfg,
+				     (clk_div_m << 0) | (clk_div_n << 16));
+			setbits_le32(&ccm->spi1_clk_cfg, (1 << 31));
+			setbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI1);
+			setbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI1);
+			break;
+		case 2:
+			setbits_le32(&ccm->spi2_clk_cfg,
+				     (clk_div_m << 0) | (clk_div_n << 16));
+			setbits_le32(&ccm->spi2_clk_cfg, (1 << 31));
+			setbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI2);
+			setbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI2);
+			break;
+		case 3:
+			setbits_le32(&ccm->spi3_clk_cfg,
+				     (clk_div_m << 0) | (clk_div_n << 16));
+			setbits_le32(&ccm->spi3_clk_cfg, (1 << 31));
+			setbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI3);
+			setbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI3);
+			break;
+	}
+
+	setbits_le32(&spi->GCR, SUNXI_SPI_GCR_MASTER | SUNXI_SPI_GCR_EN);
+	setbits_le32(&spi->TCR, 3 /* priv->clk_pol | priv->clk_pha */);  /* TODO */
+
+	udelay(10);
+
+	return 0;
+}
+
+void spi_release_bus(struct spi_slave *slave)
+{
+	struct sunxi_ccm_reg* const ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+	struct sunxi_spi_reg* spi = (struct sunxi_spi_reg *)SUNXI_SPI0_BASE;
+	int seq = 0; /* which SPI controller ? */
+	int cs = 0; /* which CS */
+	int clk_div_m = 0;
+	int clk_div_n = 0;
+
+	printf("sunxi:spi_release_bus\n");
+
+	clrbits_le32(&spi->GCR, SUNXI_SPI_GCR_MASTER | SUNXI_SPI_GCR_EN);
+	clrbits_le32(&spi->TCR, SUNXI_SPI_CPOL_LOW | SUNXI_SPI_CPOL_LOW);
+
+	switch (seq) {
+		case 0:
+			clrbits_le32(&ccm->spi0_clk_cfg, (1 << 31));
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI0);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI0);
+			break;
+		case 1:
+			clrbits_le32(&ccm->spi1_clk_cfg, (1 << 31));
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI1);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI1);
+			break;
+		case 2:
+			clrbits_le32(&ccm->spi2_clk_cfg, (1 << 31));
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI2);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI2);
+			break;
+		case 3:
+			clrbits_le32(&ccm->spi3_clk_cfg, (1 << 31));
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI3);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI3);
+			break;
+	}
+
+	sunxi_gpio_set_cfgpin(sunxi_spi_mosi_pin[seq], SUNXI_PIN_INPUT_DISABLE);
+	sunxi_gpio_set_cfgpin(sunxi_spi_miso_pin[seq], SUNXI_PIN_INPUT_DISABLE);
+	sunxi_gpio_set_cfgpin(sunxi_spi_clk_pin[seq], SUNXI_PIN_INPUT_DISABLE);
+	sunxi_gpio_set_cfgpin(sunxi_spi_cs0_pin[seq], SUNXI_PIN_INPUT_DISABLE);
+	sunxi_gpio_set_cfgpin(sunxi_spi_cs1_pin[seq], SUNXI_PIN_INPUT_DISABLE);
+}
+
+void spi_init(void)
+{
+        struct sunxi_spi_reg*  spi0 = (struct sunxi_spi_reg*)SUNXI_SPI0_BASE;
+        u32  spi_ver = readl(&spi0->VER);
+        printf("SUNXI SPI version %d.%d\n", spi_ver >> 16, spi_ver & 0xffff);
+}
+
+void spi_set_speed(struct spi_slave *slave, uint hz)
+{
+        printf("sunxi_spi: spi_set_speed(..., %d)\n", hz);
+}
+
+int spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
+		void *din, unsigned long flags)
+{
+	struct sunxi_spi_slave* sunxi_slave = container_of(slave, struct sunxi_spi_slave, slave);
+        struct sunxi_spi_reg*  spi = sunxi_slave->base;
+
+	return _sunxi_spi_xfer(spi, bitlen, dout, din, flags);
+}
+
+void spi_free_slave(struct spi_slave *slave)
+{
+	struct sunxi_spi_slave* sunxi_slave = container_of(slave, struct sunxi_spi_slave, slave);
+
+	free(sunxi_slave);
+}
+
+#else /* defined(CONFIG_DM_SPI) */
 static int sunxi_spi_ofdata_to_platdata(struct udevice *dev) {
 	debug("%s: %p\n", __func__, dev);
 	if (!dev)
@@ -111,18 +363,22 @@ static int sunxi_spi_claim_bus(struct udevice *dev) {
 
 	struct sunxi_spi_platdata *plat = dev_get_platdata(dev->parent);
 	struct sunxi_spi_privdata *priv = dev_get_priv(dev->parent);
+#if defined(CONFIG_DM_SPI)
 	struct dm_spi_slave_platdata *slave = dev_get_parent_platdata(dev);
+#endif
 
 	int seq = dev->parent->seq;
 	if (seq<0 || seq>SUNXI_MAX_SPI_SEQ)
 		return -ENODEV;
 
+#if defined(CONFIG_DM_SPI)
 	// cs can be either 0 or 1
 	if (slave->cs<0 || slave->cs>1)
 		return -ENODEV;
 	// cs can be one only for bus 1 and bus 3
 	if ((seq==0 || seq==2) && slave->cs==1)
 		return -ENODEV;
+#endif
 
 	struct sunxi_ccm_reg* const ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 	struct sunxi_spi_reg* spi = (struct sunxi_spi_reg *)plat->base;
@@ -130,10 +386,15 @@ static int sunxi_spi_claim_bus(struct udevice *dev) {
 	sunxi_gpio_set_cfgpin(sunxi_spi_mosi_pin[seq], sunxi_spi_mosi_val[seq]);
 	sunxi_gpio_set_cfgpin(sunxi_spi_miso_pin[seq], sunxi_spi_miso_val[seq]);
 	sunxi_gpio_set_cfgpin(sunxi_spi_clk_pin[seq], sunxi_spi_clk_val[seq]);
+#if defined(CONFIG_DM_SPI)
 	if (slave->cs==0)
 		sunxi_gpio_set_cfgpin(sunxi_spi_cs0_pin[seq], sunxi_spi_cs0_val[seq]);
 	else
 		sunxi_gpio_set_cfgpin(sunxi_spi_cs1_pin[seq], sunxi_spi_cs1_val[seq]);
+#else
+	/* TODO: CS1 */
+	sunxi_gpio_set_cfgpin(sunxi_spi_cs0_pin[seq], sunxi_spi_cs0_val[seq]);
+#endif
 
 	/* Reset FIFOs */
 	setbits_le32(&spi->FCR, (1 << 31) | (1 << 15));
@@ -240,77 +501,10 @@ static int sunxi_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	if (!dev)
 		return -ENODEV;
 
-	int n_bytes = DIV_ROUND_UP(bitlen, 8);
-	int ret;
-	u32 blk_size, cnt;
-	u8 *p_outbuf = (u8*)dout;
-	u8 *p_inbuf = (u8*)din;
-	unsigned char* p;
-
 	struct sunxi_spi_platdata *plat = dev_get_platdata(dev->parent);
 	struct sunxi_spi_reg* spi = (struct sunxi_spi_reg *)plat->base;
 
-	while (!(readl(&spi->ISR) & (1 << 1) /* RXFIFO empty */ ))
-		(void)readb(&spi->RXD);
-
-	if (flags & SPI_XFER_BEGIN) {
-		setbits_le32(&spi->TCR, (1 << 6));  // SS_OWNER
-		clrbits_le32(&spi->TCR, (1 << 7));  // SS_LEVEL
-	}
-
-	while (n_bytes>0) {
-		ret = 0;
-
-		if (n_bytes<MAX_SPI_BYTES)
-			blk_size = n_bytes;
-		else
-			blk_size = MAX_SPI_BYTES;
-
-		cnt = blk_size;
-
-		// start XCHG
-		writel(blk_size, &spi->MBC);
-		writel(blk_size, &spi->MTC);
-		writel(blk_size, &spi->BCC);
-
-		p = p_outbuf;
-		while (cnt--) {
-			writeb(*p++, &spi->TXD);
-		}
-
-		setbits_le32(&spi->TCR, (1 << 31)); // XCHG bit
-
-		while (readl(&spi->TCR) & (1 << 31))
-			/* wait for the xfer to complete */;
-
-		setbits_le32(&spi->ISR, (1 << 12)); // clear TC
-		cnt = blk_size;
-
-		p = p_inbuf;
-		while (cnt--) {
-			unsigned char c;
-			c = readb(&spi->RXD);
-			if (din) {
-				*p++ = c;
-			}
-		}
-
-		if (ret)
-			return ret;
-		if (dout)
-			p_outbuf += blk_size;
-		if (din)
-			p_inbuf += blk_size;
-		n_bytes -= blk_size;
-	}
-
-	if (flags & SPI_XFER_END) {
-		setbits_le32(&spi->TCR, (1 << 6));  // SS_OWNER
-		setbits_le32(&spi->TCR, (1 << 7));  // SS_LEVEL
-	}
-	udelay(1);
-
-	return 0;
+	return _sunxi_spi_xfer(spi, bitlen, dout, din, flags);
 };
 
 static int sunxi_spi_set_speed(struct udevice *bus, unsigned int hz) {
@@ -428,3 +622,4 @@ U_BOOT_DRIVER(sunxi_spi) = {
 	.probe = sunxi_spi_probe,
 	.ops = &sunxi_spi_ops,
 };
+#endif

@@ -14,6 +14,8 @@
  * the License, or (at your option) any later version.
  */
 
+#include <spi.h>
+
 #ifndef __SUNXI_SPI_H__
 #define __SUNXI_SPI_H__
 
@@ -103,6 +105,10 @@ struct sunxi_spi_platdata {
 };
 
 struct sunxi_spi_privdata {
+#if !defined(CONFIG_DM_SPI)
+	struct spi_slave slave;
+        unsigned int base;
+#endif
 	u8 spi_is_init;
 	u8 clk_pol;
 	u8 clk_pha;
@@ -133,11 +139,11 @@ struct sunxi_spi_reg {
 };
 
 struct sunxi_spi_slave {
-	struct spi_slave		slave;
+	struct spi_slave	slave;
 	struct sunxi_spi_reg*	base;
-	int						polarity;
-	unsigned int			max_hz;
-	unsigned int			mode;
+	int			polarity;
+	unsigned int		max_hz;
+	unsigned int		mode;
 };
 
 #endif // __SUNXI_SPI_H__
