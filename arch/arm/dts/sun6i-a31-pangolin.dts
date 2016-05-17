@@ -94,6 +94,8 @@
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 10000 30000>;
 	status = "okay";
+        rxc-skew-ps = <1800>;
+        txc-skew-ps = <1800>;
 
 	phy1: ethernet-phy@4 {
 		reg = <4>;
