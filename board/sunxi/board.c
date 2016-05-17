@@ -35,6 +35,8 @@
 #include <sy8106a.h>
 #include <command.h>
 
+DECLARE_GLOBAL_DATA_PTR;
+
 #if defined CONFIG_VIDEO_LCD_PANEL_I2C && !(defined CONFIG_SPL_BUILD)
 /* So that we can use pin names in Kconfig and sunxi_name_to_gpio() */
 int soft_i2c_gpio_sda;
@@ -75,8 +77,6 @@ static int soft_i2c_board_init(void)
 #else
 static int soft_i2c_board_init(void) { return 0; }
 #endif
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* add board specific code here */
 int board_init(void)
@@ -559,6 +559,25 @@ void sunxi_board_init(void)
 	defined CONFIG_AXP818_POWER
 	power_failed = axp_init();
 
+#if CONFIG_AXP221_POWER && defined(CONFIG_SUNXI_PANGOLIN)
+	/* Enable ATX power supply */
+	gpio_request(SUNXI_GPM(4), "SUS3");
+	sunxi_gpio_set_cfgpin(SUNXI_GPM(4),SUNXI_GPIO_OUTPUT);
+	gpio_direction_output(SUNXI_GPM(4),1);
+	/* Force VBUS power path disable current limit*/
+	power_failed |= axp221_write(0x30,0xE6);
+	/* wait for ATX power to be stable */
+	gpio_request(SUNXI_GPM(6),"PWGIN");
+	sunxi_gpio_set_cfgpin(SUNXI_GPM(6),SUNXI_GPIO_INPUT);
+	while(gpio_get_value(SUNXI_GPM(6))==0)
+	{
+		mdelay(100);
+	}
+	mdelay(500); /* let the power supply settle */
+	power_failed |= axp221_write(0x8f,0x41); /* AC-VBUS shorten */
+	power_failed |= axp221_write(0x30,0x62); /* disable force VBUS */
+#endif
+
 #if defined CONFIG_AXP221_POWER || defined CONFIG_AXP809_POWER || \
 	defined CONFIG_AXP818_POWER
 	power_failed |= axp_set_dcdc1(CONFIG_AXP_DCDC1_VOLT);
@@ -589,34 +608,6 @@ void sunxi_board_init(void)
 	power_failed |= axp209_set_ldo2(3000);
 	power_failed |= axp209_set_ldo3(2800);
 	power_failed |= axp209_set_ldo4(2800);
-#endif
-#ifdef CONFIG_AXP221_POWER
-	power_failed = axp221_init();
-#ifdef CONFIG_SUNXI_PANGOLIN
-	/* Enable ATX power supply */
-	gpio_request(SUNXI_GPM(4), "SUS3");
-	sunxi_gpio_set_cfgpin(SUNXI_GPM(4),SUNXI_GPIO_OUTPUT);
-	gpio_direction_output(SUNXI_GPM(4),1);
-	/* Force VBUS power path disable current limit*/
-	power_failed |= axp221_write(0x30,0xE6);
-	/* wait for ATX power to be stable */
-	gpio_request(SUNXI_GPM(6),"PWGIN");
-	sunxi_gpio_set_cfgpin(SUNXI_GPM(6),SUNXI_GPIO_INPUT);
-	while(gpio_get_value(SUNXI_GPM(6))==0)
-	{
-		mdelay(100);
-	}
-	mdelay(500); /* let the power supply settle */
-	power_failed |= axp221_write(0x8f,0x41); /* AC-VBUS shorten */
-	power_failed |= axp221_write(0x30,0x62); /* disable force VBUS */
-#endif
-	power_failed |= axp221_set_dcdc1(CONFIG_AXP221_DCDC1_VOLT);
-	power_failed |= axp221_set_dcdc2(1200); /* A31:VDD-GPU, A23:VDD-SYS */
-	power_failed |= axp221_set_dcdc3(1200); /* VDD-CPU */
-#ifdef CONFIG_MACH_SUN6I
-	power_failed |= axp221_set_dcdc4(1200); /* A31:VDD-SYS */
-#else
-	power_failed |= axp221_set_dcdc4(0);    /* A23:unused */
 #endif
 
 #if defined(CONFIG_AXP221_POWER) || defined(CONFIG_AXP809_POWER) || \
@@ -866,7 +857,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 #endif
 	return 0;
 }
-#endif /* CONFIG_OF_BOARD_SETUP */
 
 #ifdef CONFIG_SUNXI_PANGOLIN
 static int do_emmcboot(cmd_tbl_t *cmdtp, int flag, int argc,
