@@ -226,6 +226,9 @@
 #elif defined(CONFIG_MACH_SUN50I)
 #define CONFIG_SPL_TEXT_BASE		0x10040		/* sram start+header */
 #define CONFIG_SPL_MAX_SIZE		0x7fc0		/* 32 KiB on sun50i */
+#elif defined(CONFIG_MACH_SUN6I)
+#define CONFIG_SPL_TEXT_BASE		0x40		/* sram start+header */
+#define CONFIG_SPL_MAX_SIZE		0x7fe0		/* 32KB on sun6i */
 #else
 #define CONFIG_SPL_TEXT_BASE		0x40		/* sram start+header */
 #define CONFIG_SPL_MAX_SIZE		0x5fc0		/* 24KB on sun4i/sun7i */
