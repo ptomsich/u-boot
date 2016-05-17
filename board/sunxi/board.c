@@ -33,7 +33,6 @@
 #include <nand.h>
 #include <net.h>
 #include <sy8106a.h>
-#include <miiphy.h>
 #include <command.h>
 
 #if defined CONFIG_VIDEO_LCD_PANEL_I2C && !(defined CONFIG_SPL_BUILD)
@@ -718,19 +717,6 @@ static void parse_spl_header(const uint32_t spl_addr)
 	}
 	/* otherwise assume .scr format (mkimage-type script) */
 	setenv_hex("fel_scriptaddr", spl->fel_script_address);
-}
-
-int last_stage_init(void)
-{
-#ifdef CONFIG_SUNXI_PANGOLIN
-	static const char miiname[] = "ethernet@01c30000";
-	/* enables TXC and RXC skew on the Micrel PHY */
-	miiphy_write(miiname,0x4,0xd,0x2);
-	miiphy_write(miiname,0x4,0xe,0x8);
-	miiphy_write(miiname,0x4,0xd,0x4002);
-	miiphy_write(miiname,0x4,0xe,0x3de);
-#endif
-	return 0;
 }
 
 #ifdef CONFIG_MISC_INIT_R
