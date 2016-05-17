@@ -35,8 +35,8 @@ void clock_init_safe(void)
 	clrsetbits_le32(&prcm->pll_ctrl1, PRCM_PLL_CTRL_LDO_KEY_MASK,
 			PRCM_PLL_CTRL_LDO_KEY);
 	clrsetbits_le32(&prcm->pll_ctrl1, ~PRCM_PLL_CTRL_LDO_KEY_MASK,
-		PRCM_PLL_CTRL_LDO_DIGITAL_EN | PRCM_PLL_CTRL_LDO_ANALOG_EN |
-		PRCM_PLL_CTRL_EXT_OSC_EN | PRCM_PLL_CTRL_LDO_OUT_L(1370) );
+			PRCM_PLL_CTRL_LDO_DIGITAL_EN | PRCM_PLL_CTRL_LDO_ANALOG_EN |
+			PRCM_PLL_CTRL_EXT_OSC_EN | PRCM_PLL_CTRL_LDO_OUT_L(1370) );
 	clrbits_le32(&prcm->pll_ctrl1, PRCM_PLL_CTRL_LDO_KEY_MASK);
 #endif
 
@@ -48,12 +48,21 @@ void clock_init_safe(void)
 	 */
 	sdelay(100000);
 
+	/* Reinitialise PLL1 (CPUX) to 408MHz */
 	clock_set_pll1(408000000);
+	/* Enable PLL6 at 600MHz */
+	clock_pll6_init();
 
 	writel(AHB1_ABP1_DIV_DEFAULT, &ccm->ahb1_apb1_div);
 
-	/* Enable PLL6 at 600MHz */
-	clock_pll6_init();
+	{
+	  /* Release GPIO clock gate and de-assert the GPIO reset */
+	  setbits_le32(0x01c20068, (1 << 5));
+	  /* Configure PH7 as an output */
+	  clrsetbits_le32(0x01C208fc, (0b111 << 28), (0b001 << 28));
+	  /* Output LOW on PH7 */
+	  clrbits_le32(0x01C2010c, (1 << 7));
+	}
 
 	writel(MBUS_CLK_DEFAULT, &ccm->mbus0_clk_cfg);
 	if (IS_ENABLED(CONFIG_MACH_SUN6I))
@@ -99,25 +108,6 @@ void clock_init_uart(void)
 	/* enable R_PIO and R_UART clocks, and de-assert resets */
 	prcm_apb0_enable(PRCM_APB0_GATE_PIO | PRCM_APB0_GATE_UART);
 #endif
-}
-
-int clock_twi_onoff(int port, int state)
-{
-	struct sunxi_ccm_reg *const ccm =
-		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
-
-	if (port > 3)
-		return -1;
-
-	/* set the apb clock gate for twi */
-	if (state)
-		setbits_le32(&ccm->apb2_gate,
-			     CLK_GATE_OPEN << (APB2_GATE_TWI_SHIFT+port));
-	else
-		clrbits_le32(&ccm->apb2_gate,
-			     CLK_GATE_OPEN << (APB2_GATE_TWI_SHIFT+port));
-
-	return 0;
 }
 
 static inline void wait_for_pll_lock(u32 *reg)
@@ -228,7 +218,6 @@ void clock_set_pll5(unsigned int clk, bool sigma_delta_enable)
 	wait_for_pll_lock(&ccm->pll5_cfg);
 }
 
-<<<<<<< HEAD:arch/arm/mach-sunxi/clock_sun6i.c
 #ifdef CONFIG_MACH_SUN6I
 void clock_set_mipi_pll(unsigned int clk)
 {
