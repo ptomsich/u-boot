@@ -182,15 +182,15 @@ static int mmc_update_clk(struct mmc *mmc)
 	struct sunxi_mmc_host *mmchost = mmc->priv;
 	unsigned int cmd;
 	unsigned timeout_msecs = 2000;
+	unsigned long start = get_timer(0);
 
 	cmd = SUNXI_MMC_CMD_START |
 	      SUNXI_MMC_CMD_UPCLK_ONLY |
 	      SUNXI_MMC_CMD_WAIT_PRE_OVER;
 	writel(cmd, &mmchost->reg->cmd);
 	while (readl(&mmchost->reg->cmd) & SUNXI_MMC_CMD_START) {
-		if (!timeout_msecs--)
+		if (get_timer(start) > timeout_msecs)
 			return -1;
-		udelay(1000);
 	}
 
 	/* clock update sets various irq status bits, clear these */
@@ -271,18 +271,21 @@ static int mmc_trans_data_by_cpu(struct mmc *mmc, struct mmc_data *data)
 	unsigned i;
 	unsigned *buff = (unsigned int *)(reading ? data->dest : data->src);
 	unsigned byte_cnt = data->blocksize * data->blocks;
-	unsigned timeout_usecs = (byte_cnt >> 8) * 1000;
-	if (timeout_usecs < 2000000)
-		timeout_usecs = 2000000;
+	unsigned timeout_msecs = byte_cnt >> 8;
+	unsigned long  start;
+
+	if (timeout_msecs < 2000)
+		timeout_msecs = 2000;
 
 	/* Always read / write data through the CPU */
 	setbits_le32(&mmchost->reg->gctrl, SUNXI_MMC_GCTRL_ACCESS_BY_AHB);
 
+	start = get_timer(0);
+
 	for (i = 0; i < (byte_cnt >> 2); i++) {
 		while (readl(&mmchost->reg->status) & status_bit) {
-			if (!timeout_usecs--)
+			if (get_timer(start) > timeout_msecs)
 				return -1;
-			udelay(1);
 		}
 
 		if (reading)
@@ -299,16 +302,16 @@ static int mmc_rint_wait(struct mmc *mmc, unsigned int timeout_msecs,
 {
 	struct sunxi_mmc_host *mmchost = mmc->priv;
 	unsigned int status;
+	unsigned long start = get_timer(0);
 
 	do {
 		status = readl(&mmchost->reg->rint);
-		if (!timeout_msecs-- ||
+		if ((get_timer(start) > timeout_msecs) ||
 		    (status & SUNXI_MMC_RINT_INTERRUPT_ERROR_BIT)) {
 			debug("%s timeout %x\n", what,
 			      status & SUNXI_MMC_RINT_INTERRUPT_ERROR_BIT);
 			return -ETIMEDOUT;
 		}
-		udelay(1000);
 	} while (!(status & done_bit));
 
 	return 0;
@@ -399,15 +402,16 @@ static int sunxi_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 	}
 
 	if (cmd->resp_type & MMC_RSP_BUSY) {
+		unsigned long start = get_timer(0);
 		timeout_msecs = 2000;
+
 		do {
 			status = readl(&mmchost->reg->status);
-			if (!timeout_msecs--) {
+			if (get_timer(start) > timeout_msecs) {
 				debug("busy timeout\n");
 				error = -ETIMEDOUT;
 				goto out;
 			}
-			udelay(1000);
 		} while (status & SUNXI_MMC_STATUS_CARD_DATA_BUSY);
 	}
 
