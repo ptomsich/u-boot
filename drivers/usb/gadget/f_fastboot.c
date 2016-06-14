@@ -613,7 +613,7 @@ static void cb_oem(struct usb_ep *ep, struct usb_request *req)
 #ifdef CONFIG_FASTBOOT_FLASH_MMC_DEV
 	if (strncmp("format", cmd + 4, 6) == 0) {
 		char cmdbuf[32];
-                sprintf(cmdbuf, "gpt write mmc %x $partitions",
+                sprintf(cmdbuf, "gpt write mmc %x ${partitions}",
 			CONFIG_FASTBOOT_FLASH_MMC_DEV);
                 if (run_command(cmdbuf, 0))
 			fastboot_tx_write_str("FAIL");
