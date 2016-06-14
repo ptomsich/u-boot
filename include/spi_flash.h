@@ -89,7 +89,7 @@ struct spi_flash {
 	int (*flash_lock)(struct spi_flash *flash, u32 ofs, size_t len);
 	int (*flash_unlock)(struct spi_flash *flash, u32 ofs, size_t len);
 	int (*flash_is_locked)(struct spi_flash *flash, u32 ofs, size_t len);
-#ifndef CONFIG_DM_SPI_FLASH
+#if !defined(CONFIG_DM_SPI_FLASH) || defined(CONFIG_SPL_BUILD)
 	/*
 	 * These are not strictly needed for driver model, but keep them here
 	 * while the transition is in progress.
@@ -118,7 +118,7 @@ struct dm_spi_flash_ops {
 /* Access the serial operations for a device */
 #define sf_get_ops(dev) ((struct dm_spi_flash_ops *)(dev)->driver->ops)
 
-#ifdef CONFIG_DM_SPI_FLASH
+#if defined(CONFIG_DM_SPI_FLASH) && !defined(CONFIG_SPL_BUILD)
 /**
  * spi_flash_read_dm() - Read data from SPI flash
  *

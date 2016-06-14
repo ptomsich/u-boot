@@ -960,7 +960,8 @@ int spi_flash_scan(struct spi_flash *flash)
 	if (info->flags & SST_WR)
 		flash->flags |= SNOR_F_SST_WR;
 
-#ifndef CONFIG_DM_SPI_FLASH
+	/* Assign spi_flash ops */
+#if !defined(CONFIG_DM_SPI_FLASH) || defined(CONFIG_SPL_BUILD)
 	flash->write = spi_flash_cmd_write_ops;
 #if defined(CONFIG_SPI_FLASH_SST)
 	if (flash->flags & SNOR_F_SST_WR) {

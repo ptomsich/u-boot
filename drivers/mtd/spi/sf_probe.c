@@ -42,6 +42,7 @@ static int spi_flash_probe_slave(struct spi_flash *flash)
 	}
 
 	ret = spi_flash_scan(flash);
+
 	if (ret)
 		goto err_read_id;
 
@@ -54,7 +55,7 @@ err_read_id:
 	return ret;
 }
 
-#ifndef CONFIG_DM_SPI_FLASH
+#if !defined(CONFIG_DM_SPI_FLASH) || defined(CONFIG_SPL_BUILD)
 static struct spi_flash *spi_flash_probe_tail(struct spi_slave *bus)
 {
 	struct spi_flash *flash;
