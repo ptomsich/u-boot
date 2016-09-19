@@ -987,3 +987,17 @@ U_BOOT_CMD(
 		);
 #endif
 
+
+#ifdef CONFIG_SPL_LOAD_FIT
+int board_fit_config_name_match(const char *name)
+{
+#ifdef CONFIG_MACH_SUN50I
+	if ((gd->ram_size > 512 * 1024 * 1024))
+		return !strcmp(name, "sun50i-a64-pine64-plus");
+	else
+		return !strcmp(name, "sun50i-a64-pine64");
+#endif
+	return -1;
+}
+#endif
+
