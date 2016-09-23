@@ -249,9 +249,13 @@
 
 #define CONFIG_SPL_PAD_TO		32768		/* decimal for 'dd' */
 
-#if defined(CONFIG_MACH_SUN9I) || defined(CONFIG_MACH_SUN50I)
+#if defined(CONFIG_MACH_SUN9I)
 /* FIXME: 40 KiB instead of 32 KiB ? */
 #define LOW_LEVEL_SRAM_STACK		0x00018000
+#define CONFIG_SPL_STACK		LOW_LEVEL_SRAM_STACK
+#elif defined(CONFIG_MACH_SUN50I)
+/* end of SRAM A2 for now, as SRAM A1 is pretty tight */
+#define LOW_LEVEL_SRAM_STACK		0x00054000
 #define CONFIG_SPL_STACK		LOW_LEVEL_SRAM_STACK
 #else
 /* end of 32 KiB in sram */
