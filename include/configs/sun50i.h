@@ -17,6 +17,8 @@
 #define GICD_BASE		0x1c81000
 #define GICC_BASE		0x1c82000
 
+#define CONFIG_SYS_FSL_ERRATUM_A008585
+
 /*
  * Include common sunxi configuration where most the settings are
  */
