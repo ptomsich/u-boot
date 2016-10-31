@@ -120,7 +120,16 @@ struct sunxi_mctl_ctl_reg {
 	struct {		/* 0x300 DATX8 modules*/
 		u32 mdlr;		/* 0x00 master delay line register */
 		u32 lcdlr[3];		/* 0x04 local calibrated delay line registers */
-		u32 bdlr[12];		/* 0x10 bit delay line registers */
+#if defined(CONFIG_MACH_SUN8I_H3)
+	        u32 bdlr[12];		/* 0x10 bit delay line registers */
+#else
+	  /* The naming of these looks wrong, but is used in Allwinner
+	   * header files as well.  For the sake of consistency, we'll
+	   * keep this naming.
+	   */
+	        u32 iocr[11];           /* 0x10 IO configuration register */
+	        u32 bdlr6;              /* 0x3c bit delay line register */
+#endif
 		u32 gtr;		/* 0x40 general timing register */
 		u32 gcr;		/* 0x44 general configuration register */
 		u32 gsr[3];		/* 0x48 general status registers */
@@ -183,6 +192,11 @@ struct sunxi_mctl_ctl_reg {
 
 #define ACBDLR_WRITE_DELAY(x)	((x) << 8)
 
+#define ACBLDR_CLK      2
+#define ACBLDR_CS0      3
+#define ACBLDR_CS1      28
+#define ACBLDR_A(x)     (12 + x)
+  
 #define DXBDLR_DQ(x)	(x)		/* DQ0-7 BDLR index */
 #define DXBDLR_DM	(8)		/* DM BDLR index */
 #define DXBDLR_DQS	(9)		/* DQS BDLR index */

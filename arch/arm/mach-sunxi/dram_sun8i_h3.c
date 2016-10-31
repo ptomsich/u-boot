@@ -20,9 +20,23 @@ struct dram_para {
 	u8 bus_width;
 	u8 dual_rank;
 	u8 row_bits;
+#if defined(CONFIG_MACH_SUN8I_H3)
 	const u8 dx_read_delays[4][11];
 	const u8 dx_write_delays[4][11];
 	const u8 ac_delays[31];
+#else
+	struct {
+		const u8 clk;
+		const u8 ca;
+		const u8 cs[2];
+		struct {
+			const u8 dq_wr;
+			const u8 dqs_wr;
+			const u8 dq_rd;
+			const u8 dqs_rd;
+		} dx[4];
+	} pcb_delays;
+#endif
 };
 
 static inline int ns_to_t(int nanoseconds)
@@ -41,7 +55,7 @@ static void mctl_phy_init(u32 val)
 	mctl_await_completion(&mctl_ctl->pgsr[0], PGSR_INIT_DONE, 0x1);
 }
 
-#if 1
+#if defined(CONFIG_MACH_SUN8I_H3)
 static void mctl_set_bit_delays(struct dram_para *para)
 {
 	struct sunxi_mctl_ctl_reg * const mctl_ctl =
@@ -62,207 +76,87 @@ static void mctl_set_bit_delays(struct dram_para *para)
 
 	setbits_le32(&mctl_ctl->pgcr[0], 1 << 26);
 }
-#else
-/* The bit_delay_compensation() function and the 'const'-arrays within it have
-   been reconstructed from the libdram.o distributed as part of the Allwinner
-   SDK releases. */
-
+#elif defined(CONFIG_MACH_SUN50I)
 static void mctl_set_bit_delays(struct dram_para *para)
 {
 	struct sunxi_mctl_ctl_reg *mctl_ctl =
 	                (struct sunxi_mctl_ctl_reg*)SUNXI_DRAM_CTL0_BASE;
 
-	/* All had been defined as unsigned int in the original code (as per DWARF).
-	   For easier verification against the original .rodata, this has not (yet)
-	   been changed.
-	   --- TODO: there's never more than 8 bits of valid data in any of these,
-	   so we can make them uint8_t ... */
-
-	/* [sp, 364] --- .rodata + 0x0 */
-	const unsigned long ic_ca_wr_delay[31] = {
-		0, 0, 0, 3, 3, 0, 2, 2,	5, 2, 2, 2, 4, 5, 5, 5,
-		2 ,1, 5 ,2, 1, 4, 1, 5, 4, 4, 5, 4, 0, 0, 1
+	/* These arrays describe the IC package delays, as retrieved from the
+	   .rodata-section of libdram. */
+	const u8 ic_ca_wr_delay[31] = {
+		5, 5, 5, 2, 2, 5, 3, 3,	0, 3, 3, 3, 1, 0, 0, 0,
+		3, 4, 0 ,3, 4, 1, 4, 0, 1, 1, 0, 1, 5, 5, 4
 	};
-	/* [sp, 12] --- .rodata + 0x7c*/
-	const unsigned long ic_dxN_wr_delay[4][11] = {
+	const u8 ic_dxN_wr_delay[4][11] = {
 		[0] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10 },
-		[1] = { 0, 0, 0, 0, 1, 1, 1, 1, 0, 8, 8 },
+		[1] = { 0, 0, 0, 0, 1, 1, 1, 1, 0,  8,  8 },
 		[2] = { 1, 0, 1, 1, 1, 1, 1, 1, 0, 11, 11 },
 		[3] = { 1, 0, 0, 1, 1, 1, 1, 1, 0, 10, 10 }
 	};
-	/* [sp, 188] --- .rodata + 0x12c */
-	const unsigned long ic_dxN_rd_delay[4][11] = {
+	const u8 ic_dxN_rd_delay[4][11] = {
 		[0] = { 16, 16, 16, 16, 17, 16, 16, 17, 16,  1,  0 },
 		[1] = { 17, 17, 17, 17, 17, 17, 17, 17, 17,  1,	 0 },
 		[2] = { 16, 17, 17, 16, 16, 16, 16, 16, 16,  0,  0 },
 		[3] = { 17, 17, 17, 17, 17, 17, 17, 17, 17,  1,  0 }
 	};
-	/* [sp, 488] */
-	unsigned long pcb_dxN_dq_wr_delay[4] = {};
-	/* [sp, 504] */
-	unsigned long pcb_dxN_dqs_wr_delay[4] = {};
-	/* [sp, 520] */
-	unsigned long pcb_dxN_dq_rd_delay[4] = {};
-	/* [sp, 536] */
-	unsigned long pcb_dxN_dqs_rd_delay[4] = {};
 
-	unsigned long pcb_clk_wr_delay;   /* [sp, 4] */
-	unsigned long pcb_ca_wr_delay;    /* r11     */
-	unsigned long pcb_cs0_wr_delay;   /* r4      */
-	unsigned long pcb_cs1_wr_delay;   /* r5      */
+	/* Assert the PHY FIFO reset */
+	clrbits_le32(mctl_ctl->pgcr[0], (1 << 26));
 
-	/* TPR10 has the PCB delays */
-	pcb_ca_wr_delay = (para->dram_tpr10 & 0xf0) >> 4;  // r11
-	pcb_clk_wr_delay = (para->dram_tpr10 & 0xf);       // sp_4
-	pcb_cs0_wr_delay = (para->dram_tpr10 & 0xf00) >> 8;
-	pcb_cs1_wr_delay = (para->dram_tpr10 & 0xf000) >> 12;
-
-        /* loop at 0x112e */
 	for (int dx = 0; dx < 4; ++dx)
 	{
-		/* TPR11 apparently has the following layout:
-		   - bottom 16bits:  DQ_WR_DELAY (4 bits per byte-group)
-		   - top 16bits:     DQS_WR_DELAY (4 bits per byte-group)
-
-		   All together now:
-		     DQS3|DQS2|DQS1|DQS0| DQ4| DQ3| DQ2| DQ1
-		*/
-
-		pcb_dxN_dq_wr_delay[dx] = (para->dram_tpr11 >> (4 * dx)) & 0xf;
-		pcb_dxN_dqs_wr_delay[dx] = (para->dram_tpr11 >> (16 + 4 * dx)) & 0xf;
-
-		pcb_dxN_dq_rd_delay[dx] = (para->dram_tpr12 >> (16 + 4 * dx)) & 0xf;
-		pcb_dxN_dqs_rd_delay[dx] = (para->dram_tpr12 >> (4 * dx)) & 0xf;
-	}
-
-        /* BB at 0x1168 */
-	clrbits_le32(mctl_ctl->pgcr[0], (1 << 26));  // assert PHY FIFO reset
-
-	/* Best guess at the IOCR assignments (based on H3 source)
-	      0..7    DQ0-7
-	      8       DM
-	      9       DQS
-	      10      DQSN
-	*/
-
-	/* The original code used "i = -8 .. 1" for the other loop and
-	   iterated over the the dx in the inner loop.  This made for
-	   some interesting reading, as the indices had been folded
-	   into offsets used for addressing by the compiler.
-
-	   Keep this in mind, if trying to match back from the below
-	   addresses to assembly code.
-	*/
-
-	/* loop prologue at 0x1168 */
-	for (int dx = 0; dx < 4; ++dx)
-	{
-		/* loop head at 0x11e0 */
-
-		/* Common code between the two loops (loading
-		 * dXn_wr_delay, dXn_rd_delay) at 0x117e
-		 */
-
-		/* The test whether this is the DQS/DQSN case is
-		 * done using greater-than-unsigned 1 on the value
-		 * going from -8 to +1... this will be taken for
-		 * all negative values (i.e. all values in the
-		 * range except 0 and 1).
-		 *
-		 * This is the cmp/bhi pair at 0x1182 and 0x118c.
-		 */
-
-		for (int i = 0; i < 9; ++i)
+		for (int i = DXBDLR_DQ(0); i <= DXBDLR_DM; ++i)
 		{
-			/* Here's the DQS/DQSN case, which corresponds
-			 * to following trace:
-			 *
-			 *     0x11e0   loop head
-			 *     0x117e   common part
-			 *     0x11ae   iocr[i], loop tail (setting up the next iteration)
-			 *
-			 * The block at 11ae is a bit involved, as it
-			 * needs to handle both the case of "finishing
-			 * the loop from +8 to +1" (the "cmp r2, #2"
-			 * at 0x11cc") and for stepping through each
-			 * byte-group ("cmp r3, #16") at 0x11dc.
-			 */
+			unsigned wr_delay = ic_dxN_wr_delay[dx][i] + para->pcb_delays.dx[dx].dq_wr;
+			unsigned rd_delay = ic_dxN_rd_delay[dx][i] + para->pcb_delays.dx[dx].dq_rd;
+			unsigned val = ((wr_delay & 0xff) << 8) | (rd_delay & 0xff);
 
-			unsigned dXn_wr_delay = ic_dxN_wr_delay[dx][i];
-			unsigned dXn_rd_delay = ic_dxN_rd_delay[dx][i];
-			unsigned dq_wr_delay = pcb_dxN_dq_wr_delay[dx];
-			unsigned dq_rd_delay = pcb_dxN_dq_rd_delay[dx];
-
-			/* The original code had no clamping here... either code is
-			   wrong, as it should most likely be saturating arithmetic. */
-			unsigned val =
-				( (((dXn_wr_delay + dq_wr_delay) & 0xff) << 8)
-				  | (((dXn_rd_delay + dq_rd_delay) & 0xff) << 0) );
-
-			writel(val, &mctl_ctl->datx[dx].iocr[i]);
+			writel(val, &mctl_ctl->dx[dx].iocr[i]);
 		}
 
-		for (int i = 9; i < 11; ++i)
+		for (int i = DXBDLR_DQS; i <= DXBDLR_DQSN; ++i)
 		{
-			/* Here's the DQS/DQSN case, which corresponds
-			 * to following trace:
-			 *
-			 *     0x11e0   loop head
-			 *     0x117e   common part
-			 *     0x118e   bdlr6
-			 *     0x11c4   iocr[i], loop tail (setting up the next iteration)
-			 */
-
-			unsigned dXn_wr_delay = ic_dxN_wr_delay[dx][i];
-			unsigned dXn_rd_delay = ic_dxN_rd_delay[dx][i];
-			unsigned dqs_wr_delay = pcb_dxN_dqs_wr_delay[dx];
-			unsigned dqs_rd_delay = pcb_dxN_dqs_rd_delay[dx];
-
-			/* The original code had no clamping here... either code is
-			   wrong, as it should most likely be saturating arithmetic. */
-			unsigned val =
-				( (((dXn_wr_delay + dqs_wr_delay) & 0xff) << 8)
-				  | (((dXn_rd_delay + dqs_rd_delay) & 0xff) << 0) );
+			unsigned wr_delay = ic_dxN_wr_delay[dx][i] + para->pcb_delays.dx[dx].dqs_wr;
+			unsigned rd_delay = ic_dxN_rd_delay[dx][i] + para->pcb_delays.dx[dx].dqs_rd;
+			unsigned val = ((wr_delay & 0xff) << 8) | (rd_delay & 0xff);
 
 			unsigned reg;
 
-			reg = readl(&mctl_ctl->datx[dx].bdlr6);
+			/* This looks wrong and I would rather expect
+			   the BDLR6 register to need to be programmed
+			   to the 'highest delay of DQS and DQSN', but
+			   this (i.e. a bitwise OR) what was was used
+			   in libdram. */
+			reg = readl(&mctl_ctl->dx[dx].bdlr6);
 			reg |= (val << 24);
-			writel(reg, &mctl_ctl->datx[dx].bdlr6);
+			writel(reg, &mctl_ctl->dx[dx].bdlr6);
 
-			writel(val, &mctl_ctl->datx[dx].iocr[i]);
+			writel(val, &mctl_ctl->dx[dx].iocr[i]);
 		}
 	}
 
-	/* loop at 0x11ec */
-
-	/* TODO: These values should be precomputed into the array on
-	   top and this loop should only apply the values to the
-	   registers. */
 	for (int i = 0; i < 31; i++)
 	{
-		/* TODO: precompute the 5 - x into the array */
-		unsigned delay = 5 - ic_ca_wr_delay[i];
+		unsigned delay = ic_ca_wr_delay[i];
 
-		if (i == 2)
-			delay += pcb_clk_wr_delay;
-		else if (i == 3)
-			delay += pcb_cs0_wr_delay;
-		else if (i == 28)
-			delay += pcb_cs1_wr_delay;
-		else if ((i >= 12) && (i <= 27))   // looks like SA0 to SA15
-			delay += pcb_ca_wr_delay;
+		if (i == ACBLDR_CLK)
+			delay += para->pcb_delays.clk;
+		else if (i == ACBLDR_CS0)
+			delay += para->pcb_delays.cs[0];
+		else if (i == ACBLDR_CS1)
+			delay += para->pcb_delays.cs[1];
+		else if ((i >= ACBLDR_A(0)) && (i <= ACBLDR_A(15)))
+			delay += para->pcb_delays.ca;
 
-		/* NOTE: For the pins not handled above, Allwinner
-		   does no clamp to 0x3f ... this looks like a bug, as
-		   most other Designware controllers provide only 6
-		   bits for this for all bit-delay fields. */
-		/* TODO: Why not a clrset ?? */
-		writel((delay & 0x3f) << 8, &mctl_ctl->acbdlr[i]);
+		if (delay > 0x3f)
+			delay = 0x3f;  /* saturate to 0x3f */
+
+		writel(delay << 8, &mctl_ctl->acbdlr[i]);
 	}
 
-	/* BB at 0x122e */
-	setbits_le32(mctl_ctl->pgcr[0], (1 << 26));  // release PHY FIFO reset
+	/* Release the PHY FIFO reset */
+	setbits_le32(mctl_ctl->pgcr[0], (1 << 26));
 }
 #endif
 
@@ -711,18 +605,15 @@ unsigned long sunxi_dram_init(void)
 		                0,  0,  0,  0,  0,  0,  0,  0,
 		                0,  0,  0,  0,  0,  0,  0      },
 #elif defined(CONFIG_MACH_SUN50I)
-		.dx_read_delays =  {{ 16, 16, 16, 16, 17, 16, 16, 17, 16,  1,  0 },
-		                    { 17, 17, 17, 17, 17, 17, 17, 17, 17,  1,  0 },
-		                    { 16, 17, 17, 16, 16, 16, 16, 16, 16,  0,  0 },
-		                    { 17, 17, 17, 17, 17, 17, 17, 17, 17,  1,  0 }},
-		.dx_write_delays = {{  0,  0,  0,  0,  0,  0,  0,  0,  0, 15, 15 },
-		                    {  0,  0,  0,  0,  1,  1,  1,  1,  0, 10, 10 },
-		                    {  1,  0,  1,  1,  1,  1,  1,  1,  0, 11, 11 },
-		                    {  1,  0,  0,  1,  1,  1,  1,  1,  0, 12, 12 }},
-		.ac_delays = {  5,  5, 13, 10,  2,  5,  3,  3,
-		                0,  3,  3,  3,  1,  0,  0,  0,
-		                3,  4,  0,  3,  4,  1,  4,  0,
-		                1,  1,  0,  1, 13,  5,  4      },
+		.pcb_delays = {
+			.clk    = 8,
+			.ca     = 0,
+			.cs     = { 8, 8 },
+			.dx[0] = { 0, 5, 0, 0 },
+			.dx[1] = { 0, 2, 0, 0 },
+			.dx[2] = { 0, 0, 0, 0 },
+			.dx[3] = { 0, 2, 0, 0 },
+		}
 #endif
 	};
 
