@@ -409,9 +409,11 @@ static int ksz9031_of_config(struct phy_device *phydev)
 	int i, ret = 0;
 
 	for (i = 0; i < ARRAY_SIZE(ofcfg); i++)
+	{
 		ret = ksz90x1_of_config_group(phydev, &(ofcfg[i]));
 		if (ret)
 			return ret;
+	}
 
 	return 0;
 }
