@@ -84,7 +84,7 @@ static void mctl_set_bit_delays(struct dram_para *para)
 			(struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
 	int i, j;
 
-	clrbits_le32(&mctl_ctl->pgcr[0], 1 << 26);
+	clrbits_le32(&mctl_ctl->pgcr[0], PGCR0_PHYFRST);
 
 	for (i = 0; i < 4; i++)
 		for (j = 0; j < 11; j++)
@@ -96,7 +96,7 @@ static void mctl_set_bit_delays(struct dram_para *para)
 		writel(ACBDLR_WRITE_DELAY(para->ac_delays[i]),
 		       &mctl_ctl->acbdlr[i]);
 
-	setbits_le32(&mctl_ctl->pgcr[0], 1 << 26);
+	setbits_le32(&mctl_ctl->pgcr[0], PGCR0_PHYFRST);
 }
 #elif defined(CONFIG_MACH_SUN50I)
 static void mctl_set_bit_delays(struct dram_para *para)
@@ -124,7 +124,7 @@ static void mctl_set_bit_delays(struct dram_para *para)
 	};
 
 	/* Assert the PHY FIFO reset */
-	clrbits_le32(mctl_ctl->pgcr[0], (1 << 26));
+	clrbits_le32(mctl_ctl->pgcr[0], PGCR0_PHYFRST);
 
 	for (int dx = 0; dx < 4; ++dx)
 	{
@@ -178,7 +178,7 @@ static void mctl_set_bit_delays(struct dram_para *para)
 	}
 
 	/* Release the PHY FIFO reset */
-	setbits_le32(mctl_ctl->pgcr[0], (1 << 26));
+	setbits_le32(mctl_ctl->pgcr[0], PGCR0_PHYFRST);
 }
 #endif
 

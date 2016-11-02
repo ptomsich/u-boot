@@ -212,6 +212,8 @@ struct sunxi_mctl_ctl_reg {
 #define PIR_ZCAL	(0x1 << 1)	/* ZQ calibration */
 #define PIR_INIT	(0x1 << 0)	/* PHY initialization trigger */
 
+#define PGCR0_PHYFRST   (0x1 << 26)     /* PHY FIFO Reset */
+
 #define PGSR_INIT_DONE	(0x1 << 0)	/* PHY init done */
 
 #define ZQCR_PWRDOWN	(0x1 << 31)	/* ZQ power down */
