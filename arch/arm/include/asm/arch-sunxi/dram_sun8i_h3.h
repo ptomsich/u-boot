@@ -233,4 +233,32 @@ struct sunxi_mctl_ctl_reg {
 #define DXBDLR_WRITE_DELAY(x)	((x) << 8)
 #define DXBDLR_READ_DELAY(x)	((x) << 0)
 
+/* ODT configuration register
+ *
+ * wr_odt_hold:
+ *   Cycles to hold ODT for a write command.
+ *   For DDR3 (using BL=8), this is recommended to be 6.
+ *
+ * wr_odt_delay:
+ *   The delay, in clock cycles, from issuing a write command to 
+ *   setting ODT values associated with that command. ODT setting 
+ *   must remain constant for the entire time that DQS is driven.
+ *   For DDR3, this is recommended to be 0.
+ *
+ * rd_odt_hold:
+ *   Cycles to hold ODT for a read command.
+ *   For DDR3 (using BL=8), this is recommended to be 6.
+ *
+ * rd_odt_delay: 
+ *   The delay, in clock cycles, from issuing a read command to 
+ *   setting ODT values associated with that command. ODT setting 
+ *   must remain constant for the entire time that DQS is driven.
+ *   For DDR3, this is recommended to be (CL-CWL).
+ */
+
+#define ODTCFG_WR_ODT_HOLD(x)  (((x) & 0x0f) << 24)
+#define ODTCFG_WR_ODT_DELAY(x) (((x) & 0x1f) << 16)
+#define ODTCFG_RD_ODT_HOLD(x)  (((x) & 0x0f) <<  8)
+#define ODTCFG_RD_ODT_DELAY(x) (((x) & 0x1f) <<  0)
+
 #endif /* _SUNXI_DRAM_SUN8I_H3_H */
