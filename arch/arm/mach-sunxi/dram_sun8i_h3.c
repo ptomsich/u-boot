@@ -354,7 +354,7 @@ static int mctl_set_timing_params(const struct dram_bin * const speed_bin)
 	writel(DDR3_MR0_PPD_FAST_EXIT | DDR3_MR0_WR(twr) | DDR3_MR0_CL(CL), &mctl_ctl->mr[0]);
 	writel(DDR3_MR1_RTT120OHM, &mctl_ctl->mr[1]);
 	writel(DDR3_MR2_TWL(CWL), &mctl_ctl->mr[2]);
-	writel(2, &mctl_ctl->mr[3]);
+	writel(0, &mctl_ctl->mr[3]);
 
 	/* set DRAM timing */
 	writel(DRAMTMG0_TWR2PRE(wr2pre) | DRAMTMG0_TFAW(tfaw) |
