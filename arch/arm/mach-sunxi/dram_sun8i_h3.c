@@ -182,6 +182,56 @@ static void mctl_set_bit_delays(struct dram_para *para)
 }
 #endif
 
+#if defined(CONFIG_MACH_SUN50I)
+enum {
+	MBUS_PORT_CPU           = 0,
+	MBUS_PORT_GPU           = 1,
+	/* unused */
+	MBUS_PORT_DMA           = 3,
+	MBUS_PORT_VE            = 4,
+	MBUS_PORT_CSI           = 5,
+	MBUS_PORT_NAND          = 6,
+	MBUS_PORT_SS            = 7,
+	MBUS_PORT_TS            = 8,
+	MBUS_PORT_DI            = 9,
+	MBUS_PORT_DE            = 10,
+	MBUS_PORT_DE_CFD        = 11,
+};
+
+enum {
+	MBUS_QOS_LOWEST = 0,
+	MBUS_QOS_LOW,
+	MBUS_QOS_HIGH,
+	MBUS_QOS_HIGHEST
+};
+
+inline void mbus_configure_port(u8 port,
+				bool bwlimit,
+				bool priority,
+				u8 qos,         /* MBUS_QOS_LOWEST .. MBUS_QOS_HIGEST */
+				u8 waittime,    /* 0 .. 0xf */
+				u8 acs,         /* 0 .. 0xff */
+				u16 bwl0,       /* 0 .. 0xffff, bandwidth limit in MB/s */
+				u16 bwl1,
+				u16 bwl2)
+{
+	struct sunxi_mctl_com_reg * const mctl_com =
+			(struct sunxi_mctl_com_reg *)SUNXI_DRAM_COM_BASE;
+
+	const u32 cfg0 = ( (bwlimit ? (1 << 0) : 0)
+			   | (priority ? (1 << 1) : 0)
+			   | ((qos & 0x3) << 2)
+			   | ((waittime & 0xf) << 4)
+			   | ((acs & 0xff) << 8)
+			   | (bwl0 << 16) );
+	const u32 cfg1 = ((u32)bwl2 << 16) | (bwl1 & 0xffff);
+
+	printf("port %d cfg0 %08x cfg1 %08x\n", port, cfg0, cfg1);
+	writel(cfg0, &mctl_com->mcr[port][0]);
+	writel(cfg1, &mctl_com->mcr[port][1]);
+}
+#endif
+
 static void mctl_set_master_priority(void)
 {
 	struct sunxi_mctl_com_reg * const mctl_com =
@@ -223,30 +273,21 @@ static void mctl_set_master_priority(void)
 	writel(399, &mctl_com->tmr);
 	writel((1 << 16), &mctl_com->bwcr);
 
-	writel(0x00a0000d, &mctl_com->mcr[0][0]);
-	writel(0x00500064, &mctl_com->mcr[0][1]);
-	writel(0x06000009, &mctl_com->mcr[1][0]);
-	writel(0x01000578, &mctl_com->mcr[1][1]);
-	writel(0x0200000d, &mctl_com->mcr[2][0]);
-	writel(0x00600100, &mctl_com->mcr[2][1]);
-	writel(0x01000009, &mctl_com->mcr[3][0]);
-	writel(0x00500064, &mctl_com->mcr[3][1]);
-	writel(0x07000009, &mctl_com->mcr[4][0]);
-	writel(0x01000640, &mctl_com->mcr[4][1]);
-	writel(0x01000009, &mctl_com->mcr[5][0]);
-	writel(0x00000080, &mctl_com->mcr[5][1]);
-	writel(0x01000009, &mctl_com->mcr[6][0]);
-	writel(0x00400080, &mctl_com->mcr[6][1]);
-	writel(0x0100000d, &mctl_com->mcr[7][0]);
-	writel(0x00400080, &mctl_com->mcr[7][1]);
-	writel(0x0100000d, &mctl_com->mcr[8][0]);
-	writel(0x00400080, &mctl_com->mcr[8][1]);
-	writel(0x04000009, &mctl_com->mcr[9][0]);
-	writel(0x00400100, &mctl_com->mcr[9][1]);
-	writel(0x20000209, &mctl_com->mcr[10][0]);
-	writel(0x08001800, &mctl_com->mcr[10][1]);
-	writel(0x05000009, &mctl_com->mcr[11][0]);
-	writel(0x00400090, &mctl_com->mcr[11][1]);
+	mbus_configure_port(MBUS_PORT_CPU,    true,  false, MBUS_QOS_HIGHEST, 0, 0,  160,  100,   80);
+	mbus_configure_port(MBUS_PORT_GPU,    false, false, MBUS_QOS_HIGH,    0, 0, 1536, 1400,  256);
+
+	/* Port 2 is reserved per Allwinner's linux-3.10 source, yet they initialise it */
+	mbus_configure_port(2,                true,  false, MBUS_QOS_HIGHEST, 0, 0,  512,  256,   96);
+
+	mbus_configure_port(MBUS_PORT_DMA,    true,  false, MBUS_QOS_HIGH,    0, 0,  256,   80,  100);
+	mbus_configure_port(MBUS_PORT_VE,     true,  false, MBUS_QOS_HIGH,    0, 0, 1792, 1600,  256);
+	mbus_configure_port(MBUS_PORT_CSI,    true,  false, MBUS_QOS_HIGH,    0, 0,  256,  128,    0);
+	mbus_configure_port(MBUS_PORT_NAND,   true,  false, MBUS_QOS_HIGH,    0, 0,  256,  128,   64);
+	mbus_configure_port(MBUS_PORT_SS,     true,  false, MBUS_QOS_HIGHEST, 0, 0,  256,  128,   64);
+	mbus_configure_port(MBUS_PORT_TS,     true,  false, MBUS_QOS_HIGHEST, 0, 0,  256,  128,   64);
+	mbus_configure_port(MBUS_PORT_DI,     true,  false, MBUS_QOS_HIGH,    0, 0, 1024,  256,   64);
+	mbus_configure_port(MBUS_PORT_DE,     true,  false, MBUS_QOS_HIGH,    0, 2, 8192, 6144, 2048);
+	mbus_configure_port(MBUS_PORT_DE_CFD, true,  false, MBUS_QOS_HIGH,    0, 0, 1280,  144,   64);
 
 	writel(0x81000004, &mctl_com->mdfs_bwlr[2]);
 #endif
