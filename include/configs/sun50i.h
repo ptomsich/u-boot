@@ -19,6 +19,10 @@
 
 #define CONFIG_SYS_FSL_ERRATUM_A008585
 
+/* Perform some power-on self tests on DRAM */
+#define CONFIG_POST                 CONFIG_SYS_POST_MEM_REGIONS
+#define CONFIG_SYS_POST_WORD_ADDR   0x1f00100
+
 /*
  * Include common sunxi configuration where most the settings are
  */
