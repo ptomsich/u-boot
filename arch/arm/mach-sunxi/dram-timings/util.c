@@ -9,10 +9,9 @@ int dram_calculate_CL_CWL(const struct dram_bin * const para, u32 freq, u8* CL, 
 		
 	for (i = 0; i < para->cl_cwl_numentries; ++i) {
 		if ((para->cl_cwl_table[i].tCKmin <= tCK) && (tCK < para->cl_cwl_table[i].tCKmax)) {
-			CL = para->cl_cwl_table[i].CL;
-			CWL = para->cl_cwl_table[i].CWL;
+			*CL = para->cl_cwl_table[i].CL;
+			*CWL = para->cl_cwl_table[i].CWL;
 
-			printf("DRAM timings: found CL = %d, CWL = %d for %d MHz\n", CL, CWL, freq);
 			return 0;
 		}
 	}
