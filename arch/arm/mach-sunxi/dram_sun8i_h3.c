@@ -226,7 +226,6 @@ inline void mbus_configure_port(u8 port,
 			   | (bwl0 << 16) );
 	const u32 cfg1 = ((u32)bwl2 << 16) | (bwl1 & 0xffff);
 
-	printf("port %d cfg0 %08x cfg1 %08x\n", port, cfg0, cfg1);
 	writel(cfg0, &mctl_com->mcr[port][0]);
 	writel(cfg1, &mctl_com->mcr[port][1]);
 }
