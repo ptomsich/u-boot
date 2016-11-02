@@ -146,13 +146,13 @@ static void mctl_set_bit_delays(struct dram_para *para)
 			unsigned reg;
 
 			/* This looks wrong and I would rather expect
-			   the BDLR6 register to need to be programmed
+			   the SDLR6 register to need to be programmed
 			   to the 'highest delay of DQS and DQSN', but
 			   this (i.e. a bitwise OR) what was was used
 			   in libdram. */
-			reg = readl(&mctl_ctl->dx[dx].bdlr6);
+			reg = readl(&mctl_ctl->dx[dx].sdlr6);
 			reg |= (val << 24);
-			writel(reg, &mctl_ctl->dx[dx].bdlr6);
+			writel(reg, &mctl_ctl->dx[dx].sdlr6);
 
 			writel(val, &mctl_ctl->dx[dx].iocr[i]);
 		}

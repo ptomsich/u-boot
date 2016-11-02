@@ -127,8 +127,8 @@ struct sunxi_mctl_ctl_reg {
 	   * header files as well.  For the sake of consistency, we'll
 	   * keep this naming.
 	   */
-	        u32 iocr[11];           /* 0x10 IO configuration register */
-	        u32 bdlr6;              /* 0x3c bit delay line register */
+		u32 iocr[11];           /* 0x10 IO configuration register */
+	        u32 sdlr6;              /* 0x3c */
 #endif
 		u32 gtr;		/* 0x40 general timing register */
 		u32 gcr;		/* 0x44 general configuration register */
