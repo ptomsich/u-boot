@@ -486,7 +486,8 @@ static void mctl_sys_init(struct dram_para *para)
 	udelay(1000);
 
 #ifdef CONFIG_MACH_SUN50I
-	clock_set_pll11(CONFIG_DRAM_CLK * 2 * 1000000, false);
+	clock_set_pll11(CONFIG_DRAM_CLK * 2 * 1000000, true);
+
 	clrsetbits_le32(&ccm->dram_clk_cfg,
 			CCM_DRAMCLK_CFG_DIV_MASK | CCM_DRAMCLK_CFG_SRC_MASK,
 			CCM_DRAMCLK_CFG_DIV(1) | CCM_DRAMCLK_CFG_SRC_PLL11 |
