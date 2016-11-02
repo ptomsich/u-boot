@@ -345,6 +345,8 @@ static int mctl_set_timing_params(const struct dram_bin * const speed_bin)
 	if (dram_calculate_CL_CWL(speed_bin, CONFIG_DRAM_CLK, &CL, &CWL))
 	    return 1;
 
+	debug("DRAM timings: found CL = %d, CWL = %d for %d MHz\n", CL, CWL, CONFIG_DRAM_CLK);
+
 	wr2pre = CWL + (MCTL_BL/2) + twr;
 	wr2rd  = CWL + (MCTL_BL/2) + twtr;
 	rd2wr  = CL + (MCTL_BL/2) + 2 - CWL;
