@@ -360,7 +360,7 @@ static int mctl_set_timing_params(const struct dram_bin * const speed_bin)
 	writel(DRAMTMG0_TWR2PRE(wr2pre) | DRAMTMG0_TFAW(tfaw) |
 	       DRAMTMG0_TRAS_MAX(trasmax) | DRAMTMG0_TRAS(tras),
 	       &mctl_ctl->dramtmg[0]);
-	writel(DRAMTMG1_TXP(txp) | DRAMTMG1_TRTP(trtp) | DRAMTMG1_TRC(trc),
+	writel(DRAMTMG1_TXP(txp) | DRAMTMG1_RD2PRE(trtp) | DRAMTMG1_TRC(trc),
 	       &mctl_ctl->dramtmg[1]);
 	writel(DRAMTMG2_TCWL(CWL) | DRAMTMG2_TCL(CL) |
 	       DRAMTMG2_TRD2WR(rd2wr) | DRAMTMG2_TWR2RD(wr2rd),

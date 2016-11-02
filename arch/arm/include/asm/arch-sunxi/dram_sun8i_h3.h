@@ -162,13 +162,19 @@ struct sunxi_mctl_ctl_reg {
 #define MCTL_DIV32(n)        (n/32)
 #define MCTL_DIV1024(n)      (n/1024)
 
+/* For configurations with MEMC_FREQ_RATIO=2, 1T mode, divide
+ * rd2pre/wr2pre by 2. No rounding up.
+ *
+ * For configurations with MEMC_FREQ_RATIO=2, 2T mode, divide
+ * rd2pre/wr2pre by 2 and round it up to the next integer value.
+ */
 #define DRAMTMG0_TWR2PRE(x)	(MCTL_DIV2(x) << 24)
 #define DRAMTMG0_TFAW(x)	(MCTL_DIV2(x) << 16)
 #define DRAMTMG0_TRAS_MAX(x)	(MCTL_DIV1024(x) <<  8)
 #define DRAMTMG0_TRAS(x)	(MCTL_DIV2(x) <<  0)
 
 #define DRAMTMG1_TXP(x)		(MCTL_DIV2(x) << 16)
-#define DRAMTMG1_TRTP(x)	(MCTL_DIV2(x) <<  8)
+#define DRAMTMG1_RD2PRE(x)	(MCTL_DIV2(x) <<  8)
 #define DRAMTMG1_TRC(x)		(MCTL_DIV2(x) <<  0)
 
 #define DRAMTMG2_TCWL(x)	(MCTL_DIV2(x) << 24)
@@ -183,7 +189,10 @@ struct sunxi_mctl_ctl_reg {
 #define DRAMTMG4_TRCD(x)	(MCTL_DIV2(x) << 24)
 #define DRAMTMG4_TCCD(x)	(MCTL_DIV2(x) << 16)
 #define DRAMTMG4_TRRD(x)	(MCTL_DIV2(x) <<  8)
-#define DRAMTMG4_TRP(x)		(MCTL_DIV2(x) <<  0)
+
+/* For MEMC_FREQ_RATIO=2 configurations, t_rp should be set to
+   RoundDown(RoundUp(tRP/tCK)/2) + 1. */
+#define DRAMTMG4_TRP(x)		(((x/2) + 1) <<  0)
 
 #define DRAMTMG5_TCKSRX(x)	(MCTL_DIV2(x) << 24)
 #define DRAMTMG5_TCKSRE(x)	(MCTL_DIV2(x) << 16)
