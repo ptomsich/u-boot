@@ -14,17 +14,8 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/dram.h>
 #include <linux/kconfig.h>
+#include "dram-timings/timings.h"
 
-/* A number of DDR3 timings are given as "the greater of a fixed number of
-   clock cycles (CK) or nanoseconds.  We express these using a structure
-   that holds a cycle count and a duration in picoseconds (so we can model
-   sub-ns timings, such as 7.5ns without losing precision or resorting to
-   rounding up early. */
-struct dram_sun9i_timing
-{
-	u32 ck;
-	u32 ps;
-};
 
 struct dram_para {
 	u16 page_size;
@@ -48,73 +39,8 @@ struct dram_para {
 		} dx[4];
 	} pcb_delays;
 #endif
-
-	/* Timing information for each speed-bin */
-	struct dram_sun9i_cl_cwl_timing *cl_cwl_table;
-	u32 cl_cwl_numentries;
-
-	/* For the timings, we try to keep the order and grouping used in
-	   JEDEC Standard No. 79-3F */
-
-	/* timings */
-	u32 tREFI; /* in ns */
-	u32 tRFC;  /* in ns */
-
-	u32 tRAS;  /* in ps */
-
-	/* command and address timing */
-	u32 tDLLK; /* in nCK */
-	struct dram_sun9i_timing tRTP;
-	struct dram_sun9i_timing tWTR;
-	u32 tWR;   /* in nCK */
-	u32 tMRD;  /* in nCK */
-	struct dram_sun9i_timing tMOD;
-	u32 tRCD;  /* in ps */
-	u32 tRP;   /* in ps */
-	u32 tRC;   /* in ps */
-	u32 tCCD;  /* in nCK */
-	struct dram_sun9i_timing tRRD;
-	u32 tFAW;  /* in ps */
-
-	/* calibration timing */
-	//	struct dram_sun9i_timing tZQinit;
-	struct dram_sun9i_timing tZQoper;
-	struct dram_sun9i_timing tZQCS;
-
-	/* reset timing */
-	//	struct dram_sun9i_timing tXPR;
-
-	/* self-refresh timings */
-	struct dram_sun9i_timing tXS;
-	u32 tXSDLL; /* in nCK */
-	//	struct dram_sun9i_timing tCKESR;
-	struct dram_sun9i_timing tCKSRE;
-	struct dram_sun9i_timing tCKSRX;
-
-	/* power-down timings */
-	struct dram_sun9i_timing tXP;
-	struct dram_sun9i_timing tXPDLL;
-	struct dram_sun9i_timing tCKE;
-
-	/* write leveling timings */
-	u32 tWLMRD;    /* min, in nCK */
-	//	u32 tWLDQSEN;  /* min, in nCK */
-	u32 tWLO;      /* max, in ns */
-	//	u32 tWLOE;     /* max, in ns */
-
-	//	u32 tCKDPX;  /* in nCK */
-	//	u32 tCKCSX;  /* in nCK */
+	const struct dram_bin* speed_bin;
 };
-
-/* */
-struct dram_sun9i_cl_cwl_timing
-{
-	u32 CL;
-	u32 CWL;
-	u32 tCKmin;  /* in ps */
-	u32 tCKmax;  /* in ps */
-};
-
 
 
 static inline int ns_floor_t(unsigned nanoseconds)
@@ -137,7 +63,7 @@ static inline unsigned ps_roundup_t(unsigned picoseconds)
 	return DIV_ROUND_UP(CONFIG_DRAM_CLK * picoseconds, 1000000);
 }
 
-static inline unsigned timing_to_t(struct dram_sun9i_timing* constraints)
+static inline unsigned timing_to_t(const struct dram_timing* const constraints)
 {
 	return max(ps_floor_t(constraints->ps), constraints->ck);
 }
@@ -326,36 +252,36 @@ static void mctl_set_master_priority(void)
 #endif
 }
 
-static void mctl_set_timing_params(struct dram_para *para)
+static int mctl_set_timing_params(const struct dram_bin * const speed_bin)
 {
 	struct sunxi_mctl_ctl_reg * const mctl_ctl =
 			(struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
 
-	u8 trcd		= ps_roundup_t(para->tRCD);
-	u8 trc		= ps_roundup_t(para->tRC);
-	u8 trp		= ps_roundup_t(para->tRP);
-	u8 tras		= ps_roundup_t(para->tRAS);
-	u16 trefi	= ns_floor_t(para->tREFI);
-	u16 trfc	= ns_roundup_t(para->tRFC);
+	u8 trcd		= ps_roundup_t(speed_bin->tRCD);
+	u8 trc		= ps_roundup_t(speed_bin->tRC);
+	u8 trp		= ps_roundup_t(speed_bin->tRP);
+	u8 tras		= ps_roundup_t(speed_bin->tRAS);
+	u16 trefi	= ns_floor_t(speed_bin->tREFI);
+	u16 trfc	= ns_roundup_t(speed_bin->tRFC);
 
 	/* command and address timings */
-	u8 tccd		= para->tCCD;
-	u8 tfaw		= ps_roundup_t(para->tFAW);
-	u8 tmod		= timing_to_t(&para->tMOD);
-	u8 tmrd		= para->tMRD;
+	u8 tccd		= speed_bin->tCCD;
+	u8 tfaw		= ps_roundup_t(speed_bin->tFAW);
+	u8 tmod		= timing_to_t(&speed_bin->tMOD);
+	u8 tmrd		= speed_bin->tMRD;
 	u8 tmrw		= 0;  /* unused for DDR3 */
-	u8 trrd		= timing_to_t(&para->tRRD);
-	u8 trtp		= timing_to_t(&para->tRTP);
-	u8 twr		= ns_floor_t(para->tWR);
-	u8 twtr		= timing_to_t(&para->tWTR);
+	u8 trrd		= timing_to_t(&speed_bin->tRRD);
+	u8 trtp		= timing_to_t(&speed_bin->tRTP);
+	u8 twr		= ns_floor_t(speed_bin->tWR);
+	u8 twtr		= timing_to_t(&speed_bin->tWTR);
 	
 	/* power-down timings */
-	u8 txp		= timing_to_t(&para->tXP);
-	u8 tcke		= timing_to_t(&para->tCKE);
+	u8 txp		= timing_to_t(&speed_bin->tXP);
+	u8 tcke		= timing_to_t(&speed_bin->tCKE);
 
 	/* self refresh timings */
-	u8 tcksrx	= timing_to_t(&para->tXS);
-	u8 tcksre	= timing_to_t(&para->tCKSRE);
+	u8 tcksrx	= timing_to_t(&speed_bin->tXS);
+	u8 tcksre	= timing_to_t(&speed_bin->tCKSRE);
 	u8 tckesr	= tcke + 1;
 
 	u8 trasmax	= trefi * 9;
@@ -368,28 +294,15 @@ static void mctl_set_timing_params(struct dram_para *para)
 	u32 tdinit2	= (200 * CONFIG_DRAM_CLK);		/* 200us */
 	u32 tdinit3	= CONFIG_DRAM_CLK;		        /* 1us */
 
-	u8 wr2pre;  /* WL + BL/2 + tWR */ //		= tcwl + 2 + twr;	/* WL + BL / 2 + tWR */
-	u8 wr2rd; //	= tcwl + 2 + twtr;	/* WL + BL / 2 + tWTR */
-	u8 rd2wr; //	= tcl + 2 + 1 - tcwl;	/* RL + BL / 2 + 2 - WL */
+	/* derived timings, using the same terminology as Designware */
+	u8 wr2pre;
+	u8 wr2rd;
+	u8 rd2wr;
 
 	u8 CL = 0, CWL = 0;
-	
-	for (int i = 0; i < para->cl_cwl_numentries; ++i) {
-		const u32 tCK = 1000000 / CONFIG_DRAM_CLK;
-		if ((para->cl_cwl_table[i].tCKmin <= tCK)
-		    && (tCK < para->cl_cwl_table[i].tCKmax)) {
-			CL = para->cl_cwl_table[i].CL;
-			CWL = para->cl_cwl_table[i].CWL;
 
-			printf("found CL/CWL: CL = %d, CWL = %d\n", CL, CWL);
-			break;
-		}
-	}
-
-	if ((CL == 0) || (CWL == 0)) {
-		printf("DRAM timings: failed to find valid CL/CWL for %d MHz\n", CONFIG_DRAM_CLK);
-		return 0;
-	}
+	if (dram_calculate_CL_CWL(speed_bin, CONFIG_DRAM_CLK, &CL, &CWL))
+	    return 1;
 
 	wr2pre = CWL + (MCTL_BL/2) + twr;
 	wr2rd  = CWL + (MCTL_BL/2) + twtr;
@@ -432,6 +345,8 @@ static void mctl_set_timing_params(struct dram_para *para)
 
 	/* set refresh timing */
 	writel(RFSHTMG_TREFI(trefi) | RFSHTMG_TRFC(trfc), &mctl_ctl->rfshtmg);
+
+	return 0;
 }
 
 #ifdef CONFIG_MACH_SUN8I_H3
@@ -563,9 +478,12 @@ static int mctl_channel_init(struct dram_para *para)
 			(struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
 
 	unsigned int i;
+	unsigned int ret;
 
 	mctl_set_cr(para);
-	mctl_set_timing_params(para);
+	ret = mctl_set_timing_params(para->speed_bin);
+	if (ret)
+		return ret;
 	mctl_set_master_priority();
 
 	/* setting VTC, default disable all VT */
@@ -708,14 +626,6 @@ unsigned long sunxi_dram_init(void)
 	struct sunxi_mctl_ctl_reg * const mctl_ctl =
 			(struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
 
-	struct dram_sun9i_cl_cwl_timing cl_cwl[] = {
-		{ .CL =  5, .CWL = 5, .tCKmin = 3000, .tCKmax = 3300 },
-		{ .CL =  6, .CWL = 5, .tCKmin = 2500, .tCKmax = 3300 },
-		{ .CL =  8, .CWL = 6, .tCKmin = 1875, .tCKmax = 2500 },
-		{ .CL = 10, .CWL = 7, .tCKmin = 1500, .tCKmax = 1875 },
-		{ .CL = 11, .CWL = 8, .tCKmin = 1250, .tCKmax = 1500 }
-	};
-
 	struct dram_para para = {
 		.dual_rank = 0,
 		.bus_width = 32,
@@ -746,53 +656,7 @@ unsigned long sunxi_dram_init(void)
 			.dx[3] = { 0, 2, 0, 0 },
 		},
 #endif
-		/* CL/CWL table for the speed bin */
-		.cl_cwl_table = cl_cwl,
-		.cl_cwl_numentries = sizeof(cl_cwl) / sizeof(struct dram_sun9i_cl_cwl_timing),
-
-		/* timings */
-		.tREFI = 7800,   /* 7.8us (up to 85 degC) */
-		.tRFC  = 260,    /* 260ns for 4GBit devices */ // 350ns @ 8GBit
-
-		.tRCD  = 13750,
-		.tRP   = 13750,
-		.tRC   = 48750,
-		.tRAS  = 35000,
-
-		.tDLLK = 512,
-		.tRTP  = { .ck = 4, .ps = 7500 },
-		.tWTR  = { .ck = 4, .ps = 7500 },
-		.tWR   = 15,
-		.tMRD  = 4,
-		.tMOD  = { .ck = 12, .ps = 15000 },
-		.tCCD  = 4,
-		.tRRD  = { .ck = 4, .ps = 7500 },
-		.tFAW  = 40,
-
-		/* calibration timing */
-		//		.tZQinit = { .ck = 512, .ps = 640000 },
-		.tZQoper = { .ck = 256, .ps = 320000 },
-		.tZQCS   = { .ck = 64,  .ps = 80000 },
-
-		/* reset timing */
-		//		.tXPR  = { .ck = 5, .ps = 10000 },
-
-		/* self-refresh timings */
-		.tXS  = { .ck = 5, .ps = 10000 },
-		.tXSDLL = 512,
-		.tCKSRE = { .ck = 5, .ps = 10000 },
-		.tCKSRX = { .ck = 5, .ps = 10000 },
-
-		/* power-down timings */
-		.tXP = { .ck = 3, .ps = 6000 },
-		.tXPDLL = { .ck = 10, .ps = 24000 },
-		.tCKE = { .ck = 3, .ps = 5000 },
-
-		/* write leveling timings */
-		.tWLMRD = 40,
-		//		.tWLDQSEN = 25,
-		.tWLO = 7500,
-		//		.tWLOE = 2000;
+		.speed_bin = &DDR3_1600K,
 	};
 
 	mctl_sys_init(&para);
