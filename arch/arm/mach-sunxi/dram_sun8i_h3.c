@@ -388,6 +388,13 @@ static int mctl_set_timing_params(const struct dram_bin * const speed_bin)
 	/* set refresh timing */
 	writel(RFSHTMG_TREFI(trefi) | RFSHTMG_TRFC(trfc), &mctl_ctl->rfshtmg);
 
+#if defined(CONFIG_MACH_SUN50I)
+	/* ODT hold timings */
+	writel(ODTCFG_WR_ODT_HOLD(6) | ODTCFG_WR_ODT_DELAY(0)
+	       | ODTCFG_RD_ODT_HOLD(6) | ODTCFG_RD_ODT_DELAY(CL-CWL),
+	       &mctl_ctl->odtcfg);
+#endif
+
 	return 0;
 }
 
