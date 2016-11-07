@@ -138,7 +138,7 @@ static int mmc_set_mod_clk(struct sunxi_mmc_host *mmchost, unsigned int hz)
 		sclk_dly = 4;
 	} else {
 		/* hz > 50000000 */
-		oclk_dly = 1;
+		oclk_dly = 2;
 		sclk_dly = 4;
 #endif
 	}
