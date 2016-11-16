@@ -223,11 +223,11 @@ dtb-$(CONFIG_MACH_SUN6I) += \
 	sun6i-a31-app4-evb1.dtb \
 	sun6i-a31-colombus.dtb \
 	sun6i-a31-hummingbird.dtb \
-	sun6i-a31-pangolin.dtb \
 	sun6i-a31-i7.dtb \
 	sun6i-a31-m9.dtb \
 	sun6i-a31-mele-a1000g-quad.dtb \
 	sun6i-a31-mixtile-loftq.dtb \
+	sun6i-a31-pangolin.dtb
 	sun6i-a31s-colorfly-e708-q1.dtb \
 	sun6i-a31s-cs908.dtb \
 	sun6i-a31s-inet-q972.dtb \
