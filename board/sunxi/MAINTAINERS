@@ -264,6 +264,13 @@ M:	VishnuPatekar <vishnupatekar0510@gmail.com>
 S:	Maintained
 F:	configs/Sinovoip_BPI_M3_defconfig
 
+THEOBROMA SYSTEMS BOARDS
+M:	Philipp Tomsich <philipp.tomsich@theobroma-systems.com>
+M:	Klaus Goger <klaus.goger@theobroma-systems.com>
+S:	Maintained
+F:	configs/pangolin_defconfig
+W:	http://www.theobroma-systems.com/a31-uq7/tech-specs
+
 WEXLER-TAB7200 BOARD
 M:	Aleksei Mamlin <mamlinav@gmail.com>
 S:	Maintained
