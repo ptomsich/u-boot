@@ -34,4 +34,6 @@
  */
 #include <configs/sunxi-common.h>
 
+# define CONFIG_MACH_TYPE (3892 | ((CONFIG_MACH_TYPE_COMPAT_REV) << 28))
+
 #endif /* __CONFIG_H */
