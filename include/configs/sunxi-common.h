@@ -502,6 +502,12 @@ extern int soft_i2c_gpio_scl;
 #define BOOT_TARGET_DEVICES_USB(func)
 #endif
 
+#ifdef CONFIG_USB_FUNCTION_FASTBOOT
+#define BOOT_TARGET_DEVICES_FASTBOOT(func) func(FASTBOOT, fastboot, 0)
+#else
+#defineBOOT_TARGET_DEVICES_FASTBOOT(func)
+#endif
+
 /* FEL boot support, auto-execute boot.scr if a script address was provided */
 #define BOOTENV_DEV_FEL(devtypeu, devtypel, instance) \
 	"bootcmd_fel=" \
@@ -512,12 +518,20 @@ extern int soft_i2c_gpio_scl;
 #define BOOTENV_DEV_NAME_FEL(devtypeu, devtypel, instance) \
 	"fel "
 
+#define BOOTENV_DEV_FASTBOOT(devtypeu, devtypel, instance) \
+        "bootcmd_fastboot=" \
+	       "fastboot musb\0"
+
+#define BOOTENV_DEV_NAME_FASTBOOT(devtypeu, devtypel, instance) \
+        "fastboot "
+
 #define BOOT_TARGET_DEVICES(func) \
 	func(FEL, fel, na) \
-	BOOT_TARGET_DEVICES_MMC(func) \
 	BOOT_TARGET_DEVICES_MMC_EXTRA(func) \
+	BOOT_TARGET_DEVICES_MMC(func) \
 	BOOT_TARGET_DEVICES_SCSI(func) \
 	BOOT_TARGET_DEVICES_USB(func) \
+	BOOT_TARGET_DEVICES_FASTBOOT(func) \
 	func(PXE, pxe, na) \
 	func(DHCP, dhcp, na)
 
@@ -572,7 +586,7 @@ extern int soft_i2c_gpio_scl;
   "uuid_disk=${uuid_gpt_disk};" \
   "name=resource,size=16M;" \
   "name=boot,size=16M;" \
-  "name=system,size=400M,uuid=69dad710-2ce4-4e3c-b16c-21a1d49abed3;" \
+  "name=system,size=500M,uuid=69dad710-2ce4-4e3c-b16c-21a1d49abed3;" \
   "name=cache,size=256M;" \
   "name=databk,size=128M;" \
   "name=data,size=-,uuid=933ac7e1-2eb4-4f13-b844-0e14e2aef915;"
@@ -598,8 +612,7 @@ extern int soft_i2c_gpio_scl;
 	"fdtfile=" CONFIG_DEFAULT_DEVICE_TREE ".dtb\0" \
 	"console=ttyS0,115200\0" \
 	BOOTCMD_SUNXI_COMPAT \
-	BOOTENV \
-	"bootcmd=run boot_android\0"
+	BOOTENV
 
 #else /* ifndef CONFIG_SPL_BUILD */
 #define CONFIG_EXTRA_ENV_SETTINGS
