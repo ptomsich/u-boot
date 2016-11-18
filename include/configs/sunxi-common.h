@@ -41,19 +41,14 @@
 
 #include <asm/arch/cpu.h>	/* get chip and board defs */
 
-#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_DM_SERIAL)
-# define CONFIG_DW_SERIAL
-#endif
-
 /*
  * Display CPU information
  */
 #define CONFIG_DISPLAY_CPUINFO
 
 #ifdef CONFIG_SUNXI_PANGOLIN
+# undef CONFIG_SYS_PROMPT
 # define CONFIG_SYS_PROMPT	"u-boot# "
-#else
-# define CONFIG_SYS_PROMPT	"sunxi# "
 #endif
 
 /* Serial & console */
@@ -159,26 +154,45 @@
 #ifdef CONFIG_MMC
 #define CONFIG_GENERIC_MMC
 #define CONFIG_MMC_SUNXI_SLOT		0
+
 #ifdef CONFIG_SUNXI_PANGOLIN
-#ifdef CONFIG_SUNXI_ENV_MMC
-#define CONFIG_ENV_IS_IN_MMC
-#define CONFIG_SYS_MMC_ENV_DEV		0	/* first detected MMC controller */
-#define CONFIG_ENV_OFFSET		(544 << 10) /* (8 + 24 + 512) KiB */
-#endif
-#ifdef CONFIG_SUNXI_ENV_SPI
-#define CONFIG_ENV_IS_IN_SPI_FLASH
-#define CONFIG_ENV_SECT_SIZE	(64 * 1024)
-#define CONFIG_ENV_SPI				0
-#define	CONFIG_ENV_SPI_CS			0
-#define CONFIG_ENV_SPI_MAX_HZ	16000000
-#define CONFIG_ENV_OFFSET			0
-#endif
-#endif
+  #ifdef CONFIG_SUNXI_ENV_MMC
+    #define CONFIG_ENV_IS_IN_MMC
+    #define CONFIG_SYS_MMC_ENV_DEV	1	/* first detected MMC controller */
+#define CONFIG_ENV_OFFSET		(840 << 10)  /* 840 KiB */
+/* (544 << 10) */ /* (8 + 24 + 512) KiB */
+  #endif
+
+  #define CONFIG_SUPPORT_EMMC_BOOT
+  #define CONFIG_SUPPORT_EMMC_RPMB
+
+  #ifdef CONFIG_SUNXI_ENV_SPI
+    #define CONFIG_ENV_IS_IN_SPI_FLASH
+    #define CONFIG_ENV_SECT_SIZE	(64 * 1024)
+    #define CONFIG_ENV_SPI				0
+    #define CONFIG_ENV_SPI_CS			0
+    #define CONFIG_ENV_SPI_MAX_HZ	16000000
+    #define CONFIG_ENV_OFFSET			0
+  #endif
+
+  #define CONFIG_SPI_FLASH_MACRONIX
+  #define CONFIG_SF_DEFAULT_BUS 0
+  #define CONFIG_SF_DEFAULT_CS 0
+  #define CONFIG_SF_DEFAULT_SPEED 16000000
+  #define CONFIG_SF_DEFAULT_MODE 0
+  #define CONFIG_SYS_SPI_U_BOOT_OFFS   ((CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR - 16) * 512)
+  #define CONFIG_SPL_SPI_LOAD
+  #define CONFIG_SPL_SPI_SUPPORT
+  #define CONFIG_SPL_SPI_FLASH_SUPPORT
 #else
-#define CONFIG_ENV_OFFSET		(544 << 10) /* (8 + 24 + 512) KiB */
-#define CONFIG_ENV_IS_IN_MMC
-#define CONFIG_SYS_MMC_ENV_DEV		0	/* first detected MMC controller */
-#define CONFIG_SYS_MMC_MAX_DEVICE	4
+  #define CONFIG_ENV_OFFSET		(544 << 10) /* (8 + 24 + 512) KiB */
+  #define CONFIG_ENV_IS_IN_MMC
+  #define CONFIG_SYS_MMC_ENV_DEV		0	/* first detected MMC controller */
+#endif
+#endif
+
+#if defined(CONFIG_SUNXI_PANGOLIN) && !defined(CONFIG_SPL_BUILD)
+#define CONFIG_CMD_GPT
 #endif
 
 /* 64MB of malloc() pool */
@@ -332,6 +346,10 @@ extern int soft_i2c_gpio_scl;
 
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_VIDEO_BMP_LOGO
+
+#define CONFIG_CMD_BMP
+#define CONFIG_SPLASH_SCREEN_ALIGN
+
 #define CONFIG_VIDEO_STD_TIMINGS
 #define CONFIG_I2C_EDID
 #define VIDEO_LINE_LEN (pGD->plnSizeX)
@@ -350,9 +368,11 @@ extern int soft_i2c_gpio_scl;
 
 #ifdef CONFIG_SUNXI_GMAC
 #define CONFIG_PHY_GIGE			/* GMAC can use gigabit PHY	*/
-#define CONFIG_PHY_ADDR		1
+/* Cherry-pick from A80: #define CONFIG_PHY_ADDR		1 */
 #define CONFIG_MII			/* MII PHY management		*/
 #define CONFIG_PHY_REALTEK
+#define CONFIG_PHY_MICREL
+#define CONFIG_PHY_MICREL_KSZ9031
 #endif
 
 #ifdef CONFIG_USB_EHCI_HCD
@@ -374,14 +394,22 @@ extern int soft_i2c_gpio_scl;
 #ifdef CONFIG_USB_FUNCTION_FASTBOOT
 #define CONFIG_CMD_FASTBOOT
 #define CONFIG_FASTBOOT_BUF_ADDR	CONFIG_SYS_LOAD_ADDR
-#define CONFIG_FASTBOOT_BUF_SIZE	0x2000000
+#define CONFIG_FASTBOOT_BUF_SIZE	0x8000000
 #define CONFIG_ANDROID_BOOT_IMAGE
+#define CONFIG_SYS_BOOTM_LEN            0x1000000
 
 #define CONFIG_FASTBOOT_FLASH
+#define CONFIG_SUNXI_FASTBOOT_GPIO      "PM7"
+
+#ifdef CONFIG_SUNXI_FASTBOOT_GPIO
+#  define CONFIG_BOARD_LATE_INIT
+#endif
 
 #ifdef CONFIG_MMC
-#define CONFIG_FASTBOOT_FLASH_MMC_DEV	0
+#define CONFIG_FASTBOOT_FLASH_MMC_DEV	 1
 #define CONFIG_EFI_PARTITION
+#define CONFIG_EFI_PARTITION_ENTRIES_OFF 1024000
+#define CONFIG_RANDOM_UUID
 #endif
 #endif
 
@@ -534,14 +562,44 @@ extern int soft_i2c_gpio_scl;
 	CONSOLE_STDIN_SETTINGS \
 	CONSOLE_STDOUT_SETTINGS
 
+/* The space below the paritions-entries is reserved by the EFI
+ * partition table (i.e. 'first_usable_lba' points to the first
+ * LBA beyond the table.  We thus don't need to have any 'magic'
+ * partitions for the bootloader or any other reserved areas.
+ */
+#define CONFIG_EFI_PARTITION_ENTRIES_OFF 1024000
+#define PARTS_DEFAULT \
+  "uuid_disk=${uuid_gpt_disk};" \
+  "name=resource,size=16M;" \
+  "name=boot,size=16M;" \
+  "name=system,size=400M,uuid=69dad710-2ce4-4e3c-b16c-21a1d49abed3;" \
+  "name=cache,size=256M;" \
+  "name=databk,size=128M;" \
+  "name=data,size=-,uuid=933ac7e1-2eb4-4f13-b844-0e14e2aef915;"
+
+#define UPDATE_UBOOT_CMDS \
+  "update_spi=sf probe 0; sf erase 0 +80000; mmc read $kernel_addr_r 0x10 0x400; sf write $kernel_addr_r 0x0 0x7e000;\0" \
+  "update_mmc=mmc dev 0; mmc read $kernel_addr_r 0x10 0x600; mmc dev 1; mmc write $kernel_addr_r 0x10 0x600;\0"
+
+#define BOOT_ANDROID_CMD \
+  "boot_android=fatload mmc 1:1 0x43000000 /${resolution}/sys_config.bin; mmc dev 1 ; part start mmc 1 2 bootimagestart ; part size mmc 1 2 bootimagesize ; mmc read ${kernel_addr_r} ${bootimagestart} ${bootimagesize}; bootm ${kernel_addr_r}\0"
+
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONSOLE_ENV_SETTINGS \
 	MEM_LAYOUT_ENV_SETTINGS \
 	DFU_ALT_INFO_RAM \
+	UPDATE_UBOOT_CMDS \
+	BOOT_ANDROID_CMD \
+	"resolution=720p\0" \
+	"partitions=" PARTS_DEFAULT "\0" \
+	"partitions_linux=" \
+        "uuid_disk=${uuid_gpt_disk};" \
+	"name=rootfs,size=-,uuid=69dad710-2ce4-4e3c-b16c-21a1d49abed3\0" \
 	"fdtfile=" CONFIG_DEFAULT_DEVICE_TREE ".dtb\0" \
 	"console=ttyS0,115200\0" \
 	BOOTCMD_SUNXI_COMPAT \
-	BOOTENV
+	BOOTENV \
+	"bootcmd=run boot_android\0"
 
 #else /* ifndef CONFIG_SPL_BUILD */
 #define CONFIG_EXTRA_ENV_SETTINGS
