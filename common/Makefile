@@ -154,6 +154,7 @@ obj-$(CONFIG_IO_TRACE) += iotrace.o
 obj-y += memsize.o
 obj-y += stdio.o
 
+ifndef CONFIG_SPL_BUILD
 # This option is not just y/n - it can have a numeric value
 ifdef CONFIG_FASTBOOT_FLASH
 obj-y += image-sparse.o
@@ -162,6 +163,7 @@ obj-y += fb_mmc.o
 endif
 ifdef CONFIG_FASTBOOT_FLASH_NAND_DEV
 obj-y += fb_nand.o
+endif
 endif
 endif
 
@@ -175,7 +177,9 @@ obj-y += cli.o
 obj-$(CONFIG_CMDLINE) += cli_readline.o
 obj-$(CONFIG_CMD_DFU) += dfu.o
 obj-y += command.o
+ifndef CONFIG_SPL_BUILD
 obj-y += s_record.o
 obj-y += xyzModem.o
+endif
 
 CFLAGS_env_embedded.o := -Wa,--no-warn -DENV_CRC=$(shell tools/envcrc 2>/dev/null)
