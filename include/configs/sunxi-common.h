@@ -591,19 +591,10 @@ extern int soft_i2c_gpio_scl;
   "name=databk,size=128M;" \
   "name=data,size=-,uuid=933ac7e1-2eb4-4f13-b844-0e14e2aef915;"
 
-#define UPDATE_UBOOT_CMDS \
-  "update_spi=sf probe 0; sf erase 0 +80000; mmc read $kernel_addr_r 0x10 0x400; sf write $kernel_addr_r 0x0 0x7e000;\0" \
-  "update_mmc=mmc dev 0; mmc read $kernel_addr_r 0x10 0x600; mmc dev 1; mmc write $kernel_addr_r 0x10 0x600;\0"
-
-#define BOOT_ANDROID_CMD \
-  "boot_android=fatload mmc 1:1 0x43000000 /${resolution}/sys_config.bin; mmc dev 1 ; part start mmc 1 2 bootimagestart ; part size mmc 1 2 bootimagesize ; mmc read ${kernel_addr_r} ${bootimagestart} ${bootimagesize}; bootm ${kernel_addr_r}\0"
-
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONSOLE_ENV_SETTINGS \
 	MEM_LAYOUT_ENV_SETTINGS \
 	DFU_ALT_INFO_RAM \
-	UPDATE_UBOOT_CMDS \
-	BOOT_ANDROID_CMD \
 	"resolution=720p\0" \
 	"partitions=" PARTS_DEFAULT "\0" \
 	"partitions_linux=" \
