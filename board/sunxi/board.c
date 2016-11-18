@@ -414,6 +414,8 @@ int board_mmc_init(bd_t *bis)
 	 * if U_boot is set then the ROM trys to boot from mmc0 regardless
 	 * of the BOOT_SEL pins.
 	 */
+
+#if 0
 	val = readl(0x1c00024);
 	if ((val & (1<<10))) /* check UBOOT_SEL */
 	{
@@ -440,6 +442,8 @@ int board_mmc_init(bd_t *bis)
 				break;
 		}
 	}
+#endif
+
 #else
 	/*
 	 * On systems with an emmc (mmc2), figure out if we are booting from
