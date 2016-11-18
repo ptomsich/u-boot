@@ -862,6 +862,66 @@ int ft_board_setup(void *blob, bd_t *bd)
 	return 0;
 }
 
+#ifdef CONFIG_SUNXI_FASTBOOT_GPIO
+static int fastboot_key_pressed(void)
+{
+	int  pin = sunxi_name_to_gpio(CONFIG_SUNXI_FASTBOOT_GPIO);
+
+	gpio_request(pin, "fastboot");
+	gpio_direction_input(pin);
+	sunxi_gpio_set_pull(SUNXI_GPM(7), SUNXI_GPIO_PULL_UP);
+
+	udelay(100);
+
+	return !gpio_get_value(pin);
+}
+
+static int lid_open(void)
+{
+	int  pin = sunxi_name_to_gpio("PM1");
+
+	gpio_request(pin, "no_autoboot");
+	gpio_direction_input(pin);
+	sunxi_gpio_set_pull(SUNXI_GPM(1), SUNXI_GPIO_PULL_UP);
+
+	udelay(100);
+
+	return gpio_get_value(pin);
+}
+
+static int sleep_key_pressed(void)
+{
+	int  pin = sunxi_name_to_gpio("PM3");
+
+	gpio_request(pin, "ums");
+	gpio_direction_input(pin);
+	sunxi_gpio_set_pull(SUNXI_GPM(3), SUNXI_GPIO_PULL_UP);
+
+	udelay(100);
+
+	return !gpio_get_value(pin);
+}
+
+int board_late_init(void)
+{
+	if (lid_open()) {
+		setenv("bootdelay", "-1");
+		setenv("preboot", "usb start");
+	}
+	else if (fastboot_key_pressed()) {
+		setenv("stdout", "serial");
+	        setenv("stderr", "serial");
+		setenv("preboot", "fastboot musb");
+	} else if (sleep_key_pressed()) {
+		setenv("preboot", "ums musb mmc 1");
+	} else {
+		setenv("preboot", "");
+	}
+
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_SUNXI_PANGOLIN
 static int do_emmcboot(cmd_tbl_t *cmdtp, int flag, int argc,
 		char * const argv[])
