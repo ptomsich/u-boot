@@ -41,6 +41,11 @@
 
 #include <asm/arch/cpu.h>	/* get chip and board defs */
 
+/*
+ * Display CPU information
+ */
+#define CONFIG_DISPLAY_CPUINFO
+
 #ifdef CONFIG_SUNXI_PANGOLIN
 # undef CONFIG_SYS_PROMPT
 # define CONFIG_SYS_PROMPT	"u-boot# "
@@ -385,7 +390,14 @@ extern int soft_i2c_gpio_scl;
 #define CONFIG_USB_FUNCTION_MASS_STORAGE
 #endif
 
+#ifdef CONFIG_USB_FUNCTION_FASTBOOT
+#define CONFIG_CMD_FASTBOOT
+#define CONFIG_FASTBOOT_BUF_ADDR	CONFIG_SYS_LOAD_ADDR
+#define CONFIG_FASTBOOT_BUF_SIZE	0x8000000
+#define CONFIG_ANDROID_BOOT_IMAGE
 #define CONFIG_SYS_BOOTM_LEN            0x1000000
+
+#define CONFIG_FASTBOOT_FLASH
 #define CONFIG_SUNXI_FASTBOOT_GPIO      "PM7"
 
 #ifdef CONFIG_SUNXI_FASTBOOT_GPIO
@@ -393,9 +405,14 @@ extern int soft_i2c_gpio_scl;
 #endif
 
 #ifdef CONFIG_MMC
+#define CONFIG_FASTBOOT_FLASH_MMC_DEV	 1
 #define CONFIG_EFI_PARTITION
 #define CONFIG_EFI_PARTITION_ENTRIES_OFF 1024000
 #define CONFIG_RANDOM_UUID
+#endif
+#endif
+
+#ifdef CONFIG_USB_FUNCTION_MASS_STORAGE
 #endif
 
 #ifdef CONFIG_USB_KEYBOARD
@@ -585,7 +602,6 @@ extern int soft_i2c_gpio_scl;
 	CONSOLE_ENV_SETTINGS \
 	MEM_LAYOUT_ENV_SETTINGS \
 	DFU_ALT_INFO_RAM \
-	"resolution=720p\0" \
 	"partitions=" PARTS_DEFAULT "\0" \
 	"partitions_linux=" \
         "uuid_disk=${uuid_gpt_disk};" \
