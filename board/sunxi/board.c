@@ -894,7 +894,7 @@ static int lid_open(void)
 
 	gpio_request(pin, "no_autoboot");
 	gpio_direction_input(pin);
-	sunxi_gpio_set_pull(SUNXI_GPM(1), SUNXI_GPIO_PULL_UP);
+	sunxi_gpio_set_pull(SUNXI_GPM(1), SUNXI_GPIO_PULL_DOWN);
 
 	udelay(100);
 
