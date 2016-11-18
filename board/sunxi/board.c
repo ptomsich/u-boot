@@ -518,9 +518,13 @@ void i2c_init_board(void)
 #endif
 
 #ifdef CONFIG_I2C3_ENABLE
-#if defined(CONFIG_MACH_SUN6I)
+#if defined(CONFIG_MACH_SUN6I) && !defined(CONFIG_SUNXI_PANGOLIN)
 	sunxi_gpio_set_cfgpin(SUNXI_GPG(10), SUN6I_GPG_TWI3);
 	sunxi_gpio_set_cfgpin(SUNXI_GPG(11), SUN6I_GPG_TWI3);
+	clock_twi_onoff(3, 1);
+#elif defined(CONFIG_MACH_SUN6I) && defined(CONFIG_SUNXI_PANGOLIN)
+	sunxi_gpio_set_cfgpin(SUNXI_GPB(6), SUN6I_GPB_TWI3);
+	sunxi_gpio_set_cfgpin(SUNXI_GPB(5), SUN6I_GPB_TWI3);
 	clock_twi_onoff(3, 1);
 #elif defined(CONFIG_MACH_SUN7I)
 	sunxi_gpio_set_cfgpin(SUNXI_GPI(0), SUN7I_GPI_TWI3);
