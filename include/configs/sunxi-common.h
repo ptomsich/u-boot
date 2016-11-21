@@ -41,11 +41,6 @@
 
 #include <asm/arch/cpu.h>	/* get chip and board defs */
 
-/*
- * Display CPU information
- */
-#define CONFIG_DISPLAY_CPUINFO
-
 #ifdef CONFIG_SUNXI_PANGOLIN
 # undef CONFIG_SYS_PROMPT
 # define CONFIG_SYS_PROMPT	"u-boot# "
@@ -592,9 +587,9 @@ extern int soft_i2c_gpio_scl;
   "name=data,size=-,uuid=933ac7e1-2eb4-4f13-b844-0e14e2aef915;"
 
 #if (CONFIG_CONS_INDEX == 1)
-#define CONFIG_DEFAULT_CONSOLE_ENV  "console=ttyS0,115200\0"
+#define CONSOLE_DEFAULT "console=ttyS0,115200\0"
 #elif (CONFIG_CONS_INDEX == 3)
-#define CONFIG_DEFAULT_CONSOLE_ENV  "console=ttyS2,115200\0"
+#define CONSOLE_DEFAULT "console=ttyS2,115200\0"
 #else
 #error "CONFIG_CONS_INDEX to CONFIG_DEFAULT_CONSOLE_ENV missing."
 #endif
@@ -609,7 +604,7 @@ extern int soft_i2c_gpio_scl;
         "uuid_disk=${uuid_gpt_disk};" \
 	"name=rootfs,size=-,uuid=69dad710-2ce4-4e3c-b16c-21a1d49abed3\0" \
 	"fdtfile=" CONFIG_DEFAULT_DEVICE_TREE ".dtb\0" \
-	CONFIG_DEFAULT_CONSOLE_ENV \
+	CONSOLE_DEFAULT \
 	BOOTCMD_SUNXI_COMPAT \
 	BOOTENV
 
