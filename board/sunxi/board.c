@@ -728,6 +728,7 @@ static void parse_spl_header(const uint32_t spl_addr)
 static void setup_environment(const void *fdt)
 {
 	int ret;
+	char serial_string[17] = { 0 };
 	uint8_t mac_addr[6];
 	unsigned int sid[4];
 	char *serial_string;
@@ -795,7 +796,7 @@ static void setup_environment(const void *fdt)
 static void setup_environment(const void *fdt)
 {
 	uint8_t mac_addr[6];
-	char *serial_string;
+	char serial_string[17] = { 0 };
 	struct mmc *mmc0;
 	struct sunxi_mmc_host {
 		unsigned mmc_no;
@@ -807,9 +808,8 @@ static void setup_environment(const void *fdt)
 
 	mmc0 = find_mmc_device(1);
 
-	struct sunxi_mmc_host *mmchost = mmc0->priv;
 	/* lookup the real device number to get the eMMC */
-	if(mmchost->mmc_no != 2)
+	if(((struct sunxi_mmc_host*)mmc0->priv)->mmc_no != 2)
 		mmc0 = find_mmc_device(0);
 
 	if(mmc0->has_init == 0)
