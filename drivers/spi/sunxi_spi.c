@@ -62,17 +62,8 @@ static int _sunxi_spi_xfer(struct sunxi_spi_reg* spi, unsigned int bitlen,
 	u8 *p_inbuf = (u8*)din;
 	unsigned char* p;
 #ifdef CONFIG_SPL_BUILD
-	int i;
 
 	printf("_sunxi_spi_xfer %p\n", spi);
-#if 0
-	if (dout)
-	  {
-	    for (i = 0; i < n_bytes; ++i)
-	      printf("%02x ", p_outbuf[i]);
-	  }
-	printf("\n");
-#endif
 #endif
 	debug("%s: %p, %d, %p, %016lx\n", __func__, spi, bitlen, din, flags);
 
@@ -234,9 +225,6 @@ void spi_release_bus(struct spi_slave *slave)
 	struct sunxi_ccm_reg* const ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 	struct sunxi_spi_reg* spi = (struct sunxi_spi_reg *)SUNXI_SPI0_BASE;
 	int seq = 0; /* which SPI controller ? */
-	int cs = 0; /* which CS */
-	int clk_div_m = 0;
-	int clk_div_n = 0;
 
 	printf("sunxi:spi_release_bus\n");
 
