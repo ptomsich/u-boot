@@ -18,7 +18,7 @@
 #include <dm.h>
 #include <spi.h>
 #include <fdtdec.h>
-#include <asm/errno.h>
+#include <errno.h>
 #include <configs/sun6i.h>
 #include <asm/io.h>
 #include <asm/arch-sunxi/gpio.h>
