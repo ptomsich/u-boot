@@ -730,6 +730,7 @@ static void setup_environment(const void *fdt)
 	int ret;
 	uint8_t mac_addr[6];
 	unsigned int sid[4];
+	char *serial_string;
 
 	ret = sunxi_get_sid(sid);
 	if (ret == 0 && sid[0] != 0) {
@@ -793,6 +794,8 @@ static void setup_environment(const void *fdt)
  */
 static void setup_environment(const void *fdt)
 {
+	uint8_t mac_addr[6];
+	char *serial_string;
 	struct mmc *mmc0;
 	struct sunxi_mmc_host {
 		unsigned mmc_no;
@@ -855,6 +858,7 @@ int misc_init_r(void)
 
 	return 0;
 }
+#endif
 
 int ft_board_setup(void *blob, bd_t *bd)
 {
