@@ -18,8 +18,14 @@
 #include <asm/arch/prcm.h>
 #include "dram-timings/timings.h"
 
-#undef MODE2T
+
 #define DRAM_CLK (CONFIG_DRAM_CLK * 1000000)
+
+#define PS2CYCLES_FLOOR(n)    ((n * CONFIG_DRAM_CLK) / 1000000)
+#define PS2CYCLES_ROUNDUP(n)  ((n * CONFIG_DRAM_CLK + 999999) / 1000000)
+#define NS2CYCLES_FLOOR(n)    ((n * CONFIG_DRAM_CLK) / 1000)
+#define NS2CYCLES_ROUNDUP(n)  ((n * CONFIG_DRAM_CLK + 999) / 1000)
+#define MAX(a, b)             ((a) > (b) ? (a) : (b))
 
 
 struct dram_sun6i_para {
@@ -141,7 +147,6 @@ static bool mctl_rank_detect(u32 *gsr0, int rank)
 static int mctl_set_timing_params(struct sunxi_mctl_ctl_reg *mctl_ctl,
 				  struct sunxi_mctl_phy_reg *mctl_phy,
 				  const struct dram_bin * const speed_bin)
-{
 	u8 trcd		= ps_roundup_t(speed_bin->tRCD);
 	u8 trc		= ps_roundup_t(speed_bin->tRC);
 	u8 trp		= ps_roundup_t(speed_bin->tRP);
