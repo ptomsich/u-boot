@@ -11,6 +11,8 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
+#define DEBUG
+
 #include <common.h>
 #include <mmc.h>
 #include <axp_pmic.h>
@@ -78,6 +80,31 @@ static int soft_i2c_board_init(void)
 static int soft_i2c_board_init(void) { return 0; }
 #endif
 
+static int setup_led(void)
+{
+#if defined(CONFIG_LED)
+	struct udevice *dev;
+	char *led_name;
+	int ret;
+
+	led_name = fdtdec_get_config_string(gd->fdt_blob, "u-boot,boot-led");
+	if (!led_name) {
+		debug("%s: 'u-boot,boot-led' not defined\n", __func__);
+		return 0;
+	}
+	ret = led_get_by_label(led_name, &dev);
+	if (ret) {
+		debug("%s: get=%d\n", __func__, ret);
+		return ret;
+	}
+	ret = led_set_on(dev, 1);
+	if (ret)
+		return ret;
+#endif
+
+	return 0;
+}
+
 /* add board specific code here */
 int board_init(void)
 {
@@ -127,8 +154,6 @@ int board_init(void)
 	sunxi_gpio_set_cfgpin(SUNXI_GPA(7), SUNXI_GPIO_OUTPUT);
 	gpio_direction_output(SUNXI_GPA(7), 0);
 #endif
-	gpio_request(SUNXI_GPH(7), "LED");
-	sunxi_gpio_set_cfgpin(SUNXI_GPH(7), SUNXI_GPIO_OUTPUT);
 
 	gpio_direction_output(SUNXI_GPC(3), 0);
 	gpio_direction_output(SUNXI_GPC(26), 0);
@@ -137,17 +162,9 @@ int board_init(void)
 #if !defined(CONFIG_DM_GPIO)
 	gpio_direction_output(SUNXI_GPA(7), 1);
 #endif
-
-	// Blink LED
-	int i;
-	for(i=0;i<=2;i++)
-	{
-		mdelay(30);
-		gpio_direction_output(SUNXI_GPH(7), 0);
-		mdelay(30);
-		gpio_direction_output(SUNXI_GPH(7), 1);
-	}
 #endif
+
+	setup_led();
 
 	ret = axp_gpio_init();
 	if (ret)

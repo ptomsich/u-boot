@@ -63,6 +63,22 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
+
+	config {
+	       u-boot,boot-led = "pangolin:orange:power";
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_pins_pangolin>;
+
+		power {
+			label = "pangolin:orange:power";
+			gpios = <&pio 7 7 GPIO_ACTIVE_HIGH>;
+		};
+
+	};
 };
 
 &ehci0 {
@@ -189,7 +205,8 @@
 		allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 		allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
 	};
-	leds_pins_pangolin: led_pins@0 {
+
+	led_pins_pangolin: led_pins@0 {
 		allwinner,pins = "PH7", "PC16";
 		allwinner,function = "gpio_out";
 		allwinner,drive = <SUN4I_PINCTRL_20_MA>;
