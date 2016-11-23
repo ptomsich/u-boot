@@ -18,19 +18,8 @@
 #include <asm/arch/prcm.h>
 #include "dram-timings/timings.h"
 
-
-//#define MODE2T
-
-//#undef CONFIG_DRAM_ZQ
-//#define CONFIG_DRAM_ZQ 0x44
-
+#undef MODE2T
 #define DRAM_CLK (CONFIG_DRAM_CLK * 1000000)
-
-#define PS2CYCLES_FLOOR(n)    ((n * CONFIG_DRAM_CLK) / 1000000)
-#define PS2CYCLES_ROUNDUP(n)  ((n * CONFIG_DRAM_CLK + 999999) / 1000000)
-#define NS2CYCLES_FLOOR(n)    ((n * CONFIG_DRAM_CLK) / 1000)
-#define NS2CYCLES_ROUNDUP(n)  ((n * CONFIG_DRAM_CLK + 999) / 1000)
-#define MAX(a, b)             ((a) > (b) ? (a) : (b))
 
 
 struct dram_sun6i_para {
@@ -149,14 +138,10 @@ static bool mctl_rank_detect(u32 *gsr0, int rank)
 	return !(readl(gsr0) & err) && !(readl(gsr0 + 0x10) & err);
 }
 
-static int mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
+static int mctl_set_timing_params(struct sunxi_mctl_ctl_reg *mctl_ctl,
+				  struct sunxi_mctl_phy_reg *mctl_phy,
+				  const struct dram_bin * const speed_bin)
 {
-	struct sunxi_mctl_com_reg * const mctl_com =
-		(struct sunxi_mctl_com_reg *)SUNXI_DRAM_COM_BASE;
-	struct sunxi_mctl_ctl_reg *mctl_ctl;
-	struct sunxi_mctl_phy_reg *mctl_phy;
-	const struct dram_bin * const speed_bin = para->speed_bin;
-
 	u8 trcd		= ps_roundup_t(speed_bin->tRCD);
 	u8 trc		= ps_roundup_t(speed_bin->tRC);
 	u8 trp		= ps_roundup_t(speed_bin->tRP);
@@ -201,20 +186,6 @@ static int mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
 
 	debug("DRAM timings: found CL = %d, CWL = %d for %d MHz\n", CL, CWL, CONFIG_DRAM_CLK);
 
-	if (ch_index == 0) {
-		mctl_ctl = (struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
-		mctl_phy = (struct sunxi_mctl_phy_reg *)SUNXI_DRAM_PHY0_BASE;
-	} else {
-		mctl_ctl = (struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL1_BASE;
-		mctl_phy = (struct sunxi_mctl_phy_reg *)SUNXI_DRAM_PHY1_BASE;
-	}
-
-	/* Initialisation sequence */
-	writel(MCTL_MCMD_NOP, &mctl_ctl->mcmd);
-	mctl_await_completion(&mctl_ctl->mcmd, MCTL_MCMD_BUSY, 0);
-
-	/* PHY initialization */
-	writel(MCTL_PGCR, &mctl_phy->pgcr);
 	writel(DDR3_MR0_PPD_FAST_EXIT | DDR3_MR0_WR(twr) | DDR3_MR0_CL(CL), &mctl_phy->mr0);
 	writel(DDR3_MR1_RTT120OHM, &mctl_phy->mr1);
 	writel(DDR3_MR2_TWL(CWL), &mctl_phy->mr2);
@@ -239,6 +210,79 @@ static int mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
 
 	writel((tdllk << 19) | (tcke << 15) | (txpdll << 10) |
 	       (MCTL_TEXSR << 0), &mctl_phy->dtpr2);
+
+	/* Set number of clks per micro-second */
+	writel(DRAM_CLK / 1000000, &mctl_ctl->togcnt1u);
+	/* Set number of clks per 100 nano-seconds */
+	writel(DRAM_CLK / 10000000, &mctl_ctl->togcnt100n);
+	/* Set memory timing registers */
+	writel(trefi, &mctl_ctl->trefi);
+	writel(tmrd, &mctl_ctl->tmrd);
+	writel(trfc, &mctl_ctl->trfc);
+	writel((MCTL_TPREA << 16) | trp, &mctl_ctl->trp);  /* TODO */
+	writel(MCTL_TRTW, &mctl_ctl->trtw);
+	writel(MCTL_TAL, &mctl_ctl->tal);
+	writel(CL, &mctl_ctl->tcl);
+	writel(CWL, &mctl_ctl->tcwl);
+	writel(tras, &mctl_ctl->tras);
+	writel(trc, &mctl_ctl->trc);
+	writel(trcd, &mctl_ctl->trcd);
+	writel(trrd, &mctl_ctl->trrd);
+	writel(trtp, &mctl_ctl->trtp);
+	writel(twr, &mctl_ctl->twr);
+	writel(twtr, &mctl_ctl->twtr);
+	writel(MCTL_TEXSR, &mctl_ctl->texsr);
+	writel(txp, &mctl_ctl->txp);
+	writel(txpdll, &mctl_ctl->txpdll);
+	writel(tzqcs, &mctl_ctl->tzqcs);
+	writel(MCTL_TZQCSI, &mctl_ctl->tzqcsi);
+	writel(MCTL_TDQS, &mctl_ctl->tdqs);
+	writel(tcksre, &mctl_ctl->tcksre);
+	writel(tcksrx, &mctl_ctl->tcksrx);
+	writel(tcke, &mctl_ctl->tcke);
+	writel(tmod, &mctl_ctl->tmod);
+	writel(MCTL_TRSTL, &mctl_ctl->trstl);
+	writel(MCTL_TZQCL, &mctl_ctl->tzqcl);
+	writel(MCTL_TMRR, &mctl_ctl->tmrr);
+	writel(tckesr, &mctl_ctl->tckesr);
+	writel(MCTL_TDPD, &mctl_ctl->tdpd);
+
+	/* Set DFI timing registers */
+	writel(CWL, &mctl_ctl->dfitphywrl);
+	writel(CL - 1, &mctl_ctl->dfitrdden);
+	writel(MCTL_DFITPHYRDL, &mctl_ctl->dfitphyrdl);
+	writel(MCTL_DFISTCFG0, &mctl_ctl->dfistcfg0);
+
+	return 0;
+}
+
+static int mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
+{
+	struct sunxi_mctl_com_reg * const mctl_com =
+		(struct sunxi_mctl_com_reg *)SUNXI_DRAM_COM_BASE;
+	struct sunxi_mctl_ctl_reg *mctl_ctl;
+	struct sunxi_mctl_phy_reg *mctl_phy;
+	const struct dram_bin * const speed_bin = para->speed_bin;
+	unsigned int ret;
+
+	if (ch_index == 0) {
+		mctl_ctl = (struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
+		mctl_phy = (struct sunxi_mctl_phy_reg *)SUNXI_DRAM_PHY0_BASE;
+	} else {
+		mctl_ctl = (struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL1_BASE;
+		mctl_phy = (struct sunxi_mctl_phy_reg *)SUNXI_DRAM_PHY1_BASE;
+	}
+
+	/* Initialisation sequence */
+	writel(MCTL_MCMD_NOP, &mctl_ctl->mcmd);
+	mctl_await_completion(&mctl_ctl->mcmd, MCTL_MCMD_BUSY, 0);
+
+	/* PHY initialization */
+	writel(MCTL_PGCR, &mctl_phy->pgcr);
+
+	ret = mctl_set_timing_params(mctl_ctl, mctl_phy, para->speed_bin);
+	if (ret)
+		return ret;
 
 	writel(1, &mctl_ctl->dfitphyupdtype0);
 	writel(MCTL_DCR_DDR3, &mctl_phy->dcr);
@@ -307,42 +351,6 @@ static int mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
 	writel(MCTL_SCTL_CONFIG, &mctl_ctl->sctl);
 	mctl_await_completion(&mctl_ctl->sstat, 0x07, 0x01);
 
-	/* Set number of clks per micro-second */
-	writel(DRAM_CLK / 1000000, &mctl_ctl->togcnt1u);
-	/* Set number of clks per 100 nano-seconds */
-	writel(DRAM_CLK / 10000000, &mctl_ctl->togcnt100n);
-	/* Set memory timing registers */
-	writel(trefi, &mctl_ctl->trefi);
-	writel(tmrd, &mctl_ctl->tmrd);
-	writel(trfc, &mctl_ctl->trfc);
-	writel((MCTL_TPREA << 16) | trp, &mctl_ctl->trp);  /* TODO */
-	writel(MCTL_TRTW, &mctl_ctl->trtw);
-	writel(MCTL_TAL, &mctl_ctl->tal);
-	writel(CL, &mctl_ctl->tcl);
-	writel(CWL, &mctl_ctl->tcwl);
-	writel(tras, &mctl_ctl->tras);
-	writel(trc, &mctl_ctl->trc);
-	writel(trcd, &mctl_ctl->trcd);
-	writel(trrd, &mctl_ctl->trrd);
-	writel(trtp, &mctl_ctl->trtp);
-	writel(twr, &mctl_ctl->twr);
-	writel(twtr, &mctl_ctl->twtr);
-	writel(MCTL_TEXSR, &mctl_ctl->texsr);
-	writel(txp, &mctl_ctl->txp);
-	writel(txpdll, &mctl_ctl->txpdll);
-	writel(tzqcs, &mctl_ctl->tzqcs);
-	writel(MCTL_TZQCSI, &mctl_ctl->tzqcsi);
-	writel(MCTL_TDQS, &mctl_ctl->tdqs);
-	writel(tcksre, &mctl_ctl->tcksre);
-	writel(tcksrx, &mctl_ctl->tcksrx);
-	writel(tcke, &mctl_ctl->tcke);
-	writel(tmod, &mctl_ctl->tmod);
-	writel(MCTL_TRSTL, &mctl_ctl->trstl);
-	writel(MCTL_TZQCL, &mctl_ctl->tzqcl);
-	writel(MCTL_TMRR, &mctl_ctl->tmrr);
-	writel(tckesr, &mctl_ctl->tckesr);
-	writel(MCTL_TDPD, &mctl_ctl->tdpd);
-
 	/* Unknown magic performed by boot0 */
 	setbits_le32(&mctl_ctl->dfiodtcfg, 1 << 3 | 1 << 14); /* rank0_odt_write_sel */
 	clrbits_le32(&mctl_ctl->dfiodtcfg1, 0x1f);
@@ -350,12 +358,6 @@ static int mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
 	/* Select 16/32-bits mode for MCTL */
 	if (para->bus_width == 16)
 		setbits_le32(&mctl_ctl->ppcfg, 1);
-
-	/* Set DFI timing registers */
-	writel(CWL, &mctl_ctl->dfitphywrl);
-	writel(CL - 1, &mctl_ctl->dfitrdden);
-	writel(MCTL_DFITPHYRDL, &mctl_ctl->dfitphyrdl);
-	writel(MCTL_DFISTCFG0, &mctl_ctl->dfistcfg0);
 
 #if defined(MODE2T)
 	writel(MCTL_MCFG_DDR3 | (1 << 3), &mctl_ctl->mcfg);
