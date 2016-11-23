@@ -356,4 +356,15 @@ struct sunxi_mctl_phy_reg {
 #define MCTL_DX_GSR0_RANK0_TRAIN_ERR	(1 << 4)
 #define MCTL_DX_GSR0_RANK1_TRAIN_ERR	(1 << 5)
 
+/* Macros for assembling MR0 */
+#define DDR3_MR0_PPD_FAST_EXIT             (1 << 12)
+#define DDR3_MR0_WR(n) \
+	  ( (n <= 8) ? ((n - 4) << 9) : (((n >> 1) & 0x7) << 9) )
+#define DDR3_MR0_CL(n) \
+	  ( (((n - 4) & 0x7) << 4) | (((n - 4) & 0x8) >> 2) )
+#define DDR3_MR0_BL8                       (0b00 << 0)
+#define DDR3_MR1_RTT120OHM                 ((0 << 9) | (1 << 6) | (0 << 2))
+#define DDR3_MR2_TWL(n) \
+	  ( ((n - 5) & 0x7) << 3 )
+
 #endif /* _SUNXI_DRAM_SUN6I_H */
