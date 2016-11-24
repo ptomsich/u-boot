@@ -262,7 +262,6 @@ static int mctl_channel_init(int ch_index, struct dram_sun6i_para *para)
 		(struct sunxi_mctl_com_reg *)SUNXI_DRAM_COM_BASE;
 	struct sunxi_mctl_ctl_reg *mctl_ctl;
 	struct sunxi_mctl_phy_reg *mctl_phy;
-	const struct dram_bin * const speed_bin = para->speed_bin;
 	unsigned int ret;
 
 	if (ch_index == 0) {
