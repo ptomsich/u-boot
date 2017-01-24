@@ -504,7 +504,7 @@ extern int soft_i2c_gpio_scl;
 #ifdef CONFIG_USB_FUNCTION_FASTBOOT
 #define BOOT_TARGET_DEVICES_FASTBOOT(func) func(FASTBOOT, fastboot, 0)
 #else
-#defineBOOT_TARGET_DEVICES_FASTBOOT(func)
+#define BOOT_TARGET_DEVICES_FASTBOOT(func)
 #endif
 
 /* FEL boot support, auto-execute boot.scr if a script address was provided */
