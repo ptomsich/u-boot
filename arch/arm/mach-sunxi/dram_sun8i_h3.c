@@ -15,6 +15,7 @@
 #include <asm/arch/dram.h>
 #include <asm/arch/cpu.h>
 #include <linux/kconfig.h>
+#include "dram-timings/timings.h"
 
 /*
  * The delay parameters below allow to allegedly specify delay times of some
@@ -34,13 +35,32 @@ struct dram_para {
 	const u8 dx_read_delays[NR_OF_BYTE_LANES][LINES_PER_BYTE_LANE];
 	const u8 dx_write_delays[NR_OF_BYTE_LANES][LINES_PER_BYTE_LANE];
 	const u8 ac_delays[31];
+	const struct dram_bin* speed_bin;
 };
 
-static inline int ns_to_t(int nanoseconds)
+static inline int ns_floor_t(unsigned nanoseconds)
 {
-	const unsigned int ctrl_freq = CONFIG_DRAM_CLK / 2;
+	return (CONFIG_DRAM_CLK * nanoseconds) / 1000;
+}
 
-	return DIV_ROUND_UP(ctrl_freq * nanoseconds, 1000);
+static inline unsigned ns_roundup_t(unsigned nanoseconds)
+{
+	return DIV_ROUND_UP(CONFIG_DRAM_CLK * nanoseconds, 1000);
+}
+
+static inline unsigned ps_floor_t(unsigned picoseconds)
+{
+	return (CONFIG_DRAM_CLK * picoseconds) / 1000000;
+}
+
+static inline unsigned ps_roundup_t(unsigned picoseconds)
+{
+	return DIV_ROUND_UP(CONFIG_DRAM_CLK * picoseconds, 1000000);
+}
+
+static inline unsigned timing_to_t(const struct dram_timing* const constraints)
+{
+	return max(ps_floor_t(constraints->ps), constraints->ck);
 }
 
 static void mctl_phy_init(u32 val)
@@ -189,62 +209,76 @@ static void mctl_set_master_priority(uint16_t socid)
 	}
 }
 
-static void mctl_set_timing_params(uint16_t socid, struct dram_para *para)
+static void mctl_set_timing_params(uint16_t socid, const struct dram_bin * const speed_bin)
 {
 	struct sunxi_mctl_ctl_reg * const mctl_ctl =
 			(struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
 
-	u8 tccd		= 2;
-	u8 tfaw		= ns_to_t(50);
-	u8 trrd		= max(ns_to_t(10), 4);
-	u8 trcd		= ns_to_t(15);
-	u8 trc		= ns_to_t(53);
-	u8 txp		= max(ns_to_t(8), 3);
-	u8 twtr		= max(ns_to_t(8), 4);
-	u8 trtp		= max(ns_to_t(8), 4);
-	u8 twr		= max(ns_to_t(15), 3);
-	u8 trp		= ns_to_t(15);
-	u8 tras		= ns_to_t(38);
-	u16 trefi	= ns_to_t(7800) / 32;
-	u16 trfc	= ns_to_t(350);
+	u8 trcd		= ps_roundup_t(speed_bin->tRCD);
+	u8 trc		= ps_roundup_t(speed_bin->tRC);
+	u8 trp		= ps_roundup_t(speed_bin->tRP);
+	u8 tras		= ps_roundup_t(speed_bin->tRAS);
+	u16 trefi	= ns_floor_t(speed_bin->tREFI);
+	u16 trfc	= ns_roundup_t(speed_bin->tRFC);
 
-	u8 tmrw		= 0;
-	u8 tmrd		= 4;
-	u8 tmod		= 12;
-	u8 tcke		= 3;
-	u8 tcksrx	= 5;
-	u8 tcksre	= 5;
-	u8 tckesr	= 4;
-	u8 trasmax	= 24;
+	/* command and address timings */
+	u8 tccd		= speed_bin->tCCD;
+	u8 tfaw		= ps_roundup_t(speed_bin->tFAW);
+	u8 tmod		= timing_to_t(&speed_bin->tMOD);
+	u8 tmrd		= speed_bin->tMRD;
+	u8 tmrw		= 0;  /* unused for DDR3 */
+	u8 trrd		= timing_to_t(&speed_bin->tRRD);
+	u8 trtp		= timing_to_t(&speed_bin->tRTP);
+	u8 twr		= ns_floor_t(speed_bin->tWR);
+	u8 twtr		= timing_to_t(&speed_bin->tWTR);
 
-	u8 tcl		= 6; /* CL 12 */
-	u8 tcwl		= 4; /* CWL 8 */
+	/* power-down timings */
+	u8 txp		= timing_to_t(&speed_bin->tXP);
+	u8 tcke		= timing_to_t(&speed_bin->tCKE);
+
+	/* self refresh timings */
+	u8 tcksrx	= timing_to_t(&speed_bin->tXS);
+	u8 tcksre	= timing_to_t(&speed_bin->tCKSRE);
+	u8 tckesr	= tcke + 1;
+
+	u8 trasmax	= trefi * 9;
+
 	u8 t_rdata_en	= 4;
 	u8 wr_latency	= 2;
 
-	u32 tdinit0	= (500 * CONFIG_DRAM_CLK) + 1;		/* 500us */
-	u32 tdinit1	= (360 * CONFIG_DRAM_CLK) / 1000 + 1;	/* 360ns */
-	u32 tdinit2	= (200 * CONFIG_DRAM_CLK) + 1;		/* 200us */
-	u32 tdinit3	= (1 * CONFIG_DRAM_CLK) + 1;		/* 1us */
+	u32 tdinit0	= (500 * CONFIG_DRAM_CLK);		/* 500us */
+	u32 tdinit1	= (360 * CONFIG_DRAM_CLK + 999) / 1000;	/* 360ns */
+	u32 tdinit2	= (200 * CONFIG_DRAM_CLK);		/* 200us */
+	u32 tdinit3	= CONFIG_DRAM_CLK;		        /* 1us */
 
-	u8 twtp		= tcwl + 2 + twr;	/* WL + BL / 2 + tWR */
-	u8 twr2rd	= tcwl + 2 + twtr;	/* WL + BL / 2 + tWTR */
-	u8 trd2wr	= tcl + 2 + 1 - tcwl;	/* RL + BL / 2 + 2 - WL */
+	/* derived timings, using the same terminology as Designware */
+	u8 wr2pre;
+	u8 wr2rd;
+	u8 rd2wr;
+
+	u8 CL = 0, CWL = 0;
+
+	if (dram_calculate_CL_CWL(speed_bin, CONFIG_DRAM_CLK, &CL, &CWL))
+	    return 1;
+
+	/* calculate derived timings that depend on CL and CWL */
+	wr2pre = CWL + (MCTL_BL/2) + twr;
+	wr2rd  = CWL + (MCTL_BL/2) + twtr;
+	rd2wr  = CL + (MCTL_BL/2) + 2 - CWL;
 
 	/* set mode register */
-	writel(0x1c70, &mctl_ctl->mr[0]);	/* CL=11, WR=12 */
-	writel(0x40, &mctl_ctl->mr[1]);
-	writel(0x18, &mctl_ctl->mr[2]);		/* CWL=8 */
-	writel(0x0, &mctl_ctl->mr[3]);
+	writel(DDR3_MR0_PPD_FAST_EXIT | DDR3_MR0_WR(twr) | DDR3_MR0_CL(CL), &mctl_ctl->mr[0]);
+	writel(DDR3_MR1_RTT120OHM, &mctl_ctl->mr[1]);
+	writel(DDR3_MR2_TWL(CWL), &mctl_ctl->mr[2]);
+	writel(0, &mctl_ctl->mr[3]);
 
 	/* set DRAM timing */
-	writel(DRAMTMG0_TWTP(twtp) | DRAMTMG0_TFAW(tfaw) |
-	       DRAMTMG0_TRAS_MAX(trasmax) | DRAMTMG0_TRAS(tras),
+	writel(DRAMTMG0_TWR2PRE(wr2pre) | DRAMTMG0_TFAW(tfaw) |
 	       &mctl_ctl->dramtmg[0]);
 	writel(DRAMTMG1_TXP(txp) | DRAMTMG1_TRTP(trtp) | DRAMTMG1_TRC(trc),
 	       &mctl_ctl->dramtmg[1]);
-	writel(DRAMTMG2_TCWL(tcwl) | DRAMTMG2_TCL(tcl) |
-	       DRAMTMG2_TRD2WR(trd2wr) | DRAMTMG2_TWR2RD(twr2rd),
+	writel(DRAMTMG2_TCWL(CWL) | DRAMTMG2_TCL(CL) |
+	       DRAMTMG2_TRD2WR(rd2wr) | DRAMTMG2_TWR2RD(wr2rd),
 	       &mctl_ctl->dramtmg[2]);
 	writel(DRAMTMG3_TMRW(tmrw) | DRAMTMG3_TMRD(tmrd) | DRAMTMG3_TMOD(tmod),
 	       &mctl_ctl->dramtmg[3]);
@@ -268,6 +302,13 @@ static void mctl_set_timing_params(uint16_t socid, struct dram_para *para)
 
 	/* set refresh timing */
 	writel(RFSHTMG_TREFI(trefi) | RFSHTMG_TRFC(trfc), &mctl_ctl->rfshtmg);
+
+	/* set ODT hold timings */
+	if (socid == SOCID_A64) {
+	  writel(ODTCFG_WR_ODT_HOLD(6) | ODTCFG_WR_ODT_DELAY(0)
+		 | ODTCFG_RD_ODT_HOLD(6) | ODTCFG_RD_ODT_DELAY(CL-CWL),
+		 &mctl_ctl->odtcfg);
+	}
 }
 
 static u32 bin_to_mgray(int val)
@@ -427,9 +468,12 @@ static int mctl_channel_init(uint16_t socid, struct dram_para *para)
 			(struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
 
 	unsigned int i;
+	unsigned int ret;
 
 	mctl_set_cr(para);
-	mctl_set_timing_params(socid, para);
+	ret = mctl_set_timing_params(socid, para->speed_bin);
+	if (ret)
+		return ret;
 	mctl_set_master_priority(socid);
 
 	/* setting VTC, default disable all VT */
@@ -626,6 +670,7 @@ unsigned long sunxi_dram_init(void)
 		.dx_write_delays = SUN50I_A64_DX_WRITE_DELAYS,
 		.ac_delays	 = SUN50I_A64_AC_DELAYS,
 #endif
+		.speed_bin = &DDR3_1600K,
 	};
 /*
  * Let the compiler optimize alternatives away by passing this value into
