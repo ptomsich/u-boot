@@ -184,8 +184,6 @@ static int mctl_set_timing_params(struct sunxi_mctl_ctl_reg *mctl_ctl,
 	if (dram_calculate_CL_CWL(speed_bin, CONFIG_DRAM_CLK, &CL, &CWL))
 	    return 1;
 
-	debug("DRAM timings: found CL = %d, CWL = %d for %d MHz\n", CL, CWL, CONFIG_DRAM_CLK);
-
 	writel(DDR3_MR0_PPD_FAST_EXIT | DDR3_MR0_WR(twr) | DDR3_MR0_CL(CL), &mctl_phy->mr0);
 	writel(DDR3_MR1_RTT120OHM, &mctl_phy->mr1);
 	writel(DDR3_MR2_TWL(CWL), &mctl_phy->mr2);
