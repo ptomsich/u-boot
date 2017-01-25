@@ -274,6 +274,7 @@ static void mctl_set_timing_params(uint16_t socid, const struct dram_bin * const
 
 	/* set DRAM timing */
 	writel(DRAMTMG0_TWR2PRE(wr2pre) | DRAMTMG0_TFAW(tfaw) |
+	       DRAMTMG0_TRAS_MAX(trasmax) | DRAMTMG0_TRAS(tras),
 	       &mctl_ctl->dramtmg[0]);
 	writel(DRAMTMG1_TXP(txp) | DRAMTMG1_TRTP(trtp) | DRAMTMG1_TRC(trc),
 	       &mctl_ctl->dramtmg[1]);
