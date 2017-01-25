@@ -750,7 +750,6 @@ static void setup_environment(const void *fdt)
 	char serial_string[17] = { 0 };
 	uint8_t mac_addr[6];
 	unsigned int sid[4];
-	char *serial_string;
 
 	ret = sunxi_get_sid(sid);
 	if (ret == 0 && sid[0] != 0) {
