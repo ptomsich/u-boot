@@ -41,11 +41,6 @@
 
 #include <asm/arch/cpu.h>	/* get chip and board defs */
 
-/*
- * Display CPU information
- */
-#define CONFIG_DISPLAY_CPUINFO
-
 #ifdef CONFIG_SUNXI_PANGOLIN
 # undef CONFIG_SYS_PROMPT
 # define CONFIG_SYS_PROMPT	"u-boot# "
@@ -391,13 +386,9 @@ extern int soft_i2c_gpio_scl;
 #endif
 
 #ifdef CONFIG_USB_FUNCTION_FASTBOOT
-#define CONFIG_CMD_FASTBOOT
-#define CONFIG_FASTBOOT_BUF_ADDR	CONFIG_SYS_LOAD_ADDR
 #define CONFIG_FASTBOOT_BUF_SIZE	0x8000000
-#define CONFIG_ANDROID_BOOT_IMAGE
 #define CONFIG_SYS_BOOTM_LEN            0x1000000
 
-#define CONFIG_FASTBOOT_FLASH
 #define CONFIG_SUNXI_FASTBOOT_GPIO      "PM7"
 
 #ifdef CONFIG_SUNXI_FASTBOOT_GPIO
@@ -428,7 +419,6 @@ extern int soft_i2c_gpio_scl;
 #endif
 
 #define CONFIG_MISC_INIT_R
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV
 
 #ifndef CONFIG_SPL_BUILD
 #include <config_distro_defaults.h>
