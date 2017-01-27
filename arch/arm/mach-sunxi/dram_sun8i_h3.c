@@ -209,7 +209,7 @@ static void mctl_set_master_priority(uint16_t socid)
 	}
 }
 
-static void mctl_set_timing_params(uint16_t socid, const struct dram_bin * const speed_bin)
+static int mctl_set_timing_params(uint16_t socid, const struct dram_bin * const speed_bin)
 {
 	struct sunxi_mctl_ctl_reg * const mctl_ctl =
 			(struct sunxi_mctl_ctl_reg *)SUNXI_DRAM_CTL0_BASE;
@@ -276,7 +276,7 @@ static void mctl_set_timing_params(uint16_t socid, const struct dram_bin * const
 	writel(DRAMTMG0_TWR2PRE(wr2pre) | DRAMTMG0_TFAW(tfaw) |
 	       DRAMTMG0_TRAS_MAX(trasmax) | DRAMTMG0_TRAS(tras),
 	       &mctl_ctl->dramtmg[0]);
-	writel(DRAMTMG1_TXP(txp) | DRAMTMG1_TRTP(trtp) | DRAMTMG1_TRC(trc),
+	writel(DRAMTMG1_TXP(txp) | DRAMTMG1_RD2PRE(trtp) | DRAMTMG1_TRC(trc),
 	       &mctl_ctl->dramtmg[1]);
 	writel(DRAMTMG2_TCWL(CWL) | DRAMTMG2_TCL(CL) |
 	       DRAMTMG2_TRD2WR(rd2wr) | DRAMTMG2_TWR2RD(wr2rd),
@@ -310,6 +310,8 @@ static void mctl_set_timing_params(uint16_t socid, const struct dram_bin * const
 		 | ODTCFG_RD_ODT_HOLD(6) | ODTCFG_RD_ODT_DELAY(CL-CWL),
 		 &mctl_ctl->odtcfg);
 	}
+
+	return 0;
 }
 
 static u32 bin_to_mgray(int val)

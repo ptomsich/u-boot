@@ -130,42 +130,68 @@ struct sunxi_mctl_ctl_reg {
 	u32 upd2;		/* 0x888 */
 };
 
+#define MCTL_BL                 8   /* use a burst-length of 8 */
+
 #define PTR3_TDINIT1(x)		((x) << 20)
 #define PTR3_TDINIT0(x)		((x) <<  0)
 
 #define PTR4_TDINIT3(x)		((x) << 20)
 #define PTR4_TDINIT2(x)		((x) <<  0)
 
-#define DRAMTMG0_TWTP(x)	((x) << 24)
-#define DRAMTMG0_TFAW(x)	((x) << 16)
-#define DRAMTMG0_TRAS_MAX(x)	((x) <<  8)
-#define DRAMTMG0_TRAS(x)	((x) <<  0)
+/* Macros for assembling MR0, MR1 and MR2 */
+#define DDR3_MR0_PPD_FAST_EXIT             (1 << 12)
+#define DDR3_MR0_WR(n) \
+  ( (n <= 8) ? ((n - 4) << 9) : (((n >> 1) & 0x7) << 9) )
+#define DDR3_MR0_CL(n) \
+  ( (((n - 4) & 0x7) << 4) | (((n - 4) & 0x8) >> 2) )
+#define DDR3_MR0_BL8                       (0b00 << 0)
+#define DDR3_MR1_RTT120OHM                 ((0 << 9) | (1 << 6) | (0 << 2))
+#define DDR3_MR2_TWL(n) \
+  ( ((n - 5) & 0x7) << 3 )
 
-#define DRAMTMG1_TXP(x)		((x) << 16)
-#define DRAMTMG1_TRTP(x)	((x) <<  8)
-#define DRAMTMG1_TRC(x)		((x) <<  0)
+#define MCTL_DIV2(n)         ((n + 1)/2)
+#define MCTL_DIV32(n)        (n/32)
+#define MCTL_DIV1024(n)      (n/1024)
 
-#define DRAMTMG2_TCWL(x)	((x) << 24)
-#define DRAMTMG2_TCL(x)		((x) << 16)
-#define DRAMTMG2_TRD2WR(x)	((x) <<  8)
-#define DRAMTMG2_TWR2RD(x)	((x) <<  0)
+/* For configurations with MEMC_FREQ_RATIO=2, 1T mode, divide
+ * rd2pre/wr2pre by 2. No rounding up.
+ *
+ * For configurations with MEMC_FREQ_RATIO=2, 2T mode, divide
+ * rd2pre/wr2pre by 2 and round it up to the next integer value.
+ */
+#define DRAMTMG0_TWR2PRE(x)	(MCTL_DIV2(x) << 24)
+#define DRAMTMG0_TFAW(x)	(MCTL_DIV2(x) << 16)
+#define DRAMTMG0_TRAS_MAX(x)	(MCTL_DIV1024(x) <<  8)
+#define DRAMTMG0_TRAS(x)	(MCTL_DIV2(x) <<  0)
 
-#define DRAMTMG3_TMRW(x)	((x) << 16)
-#define DRAMTMG3_TMRD(x)	((x) << 12)
-#define DRAMTMG3_TMOD(x)	((x) <<  0)
+#define DRAMTMG1_TXP(x)		(MCTL_DIV2(x) << 16)
+#define DRAMTMG1_RD2PRE(x)	(MCTL_DIV2(x) <<  8)
+#define DRAMTMG1_TRC(x)		(MCTL_DIV2(x) <<  0)
 
-#define DRAMTMG4_TRCD(x)	((x) << 24)
-#define DRAMTMG4_TCCD(x)	((x) << 16)
-#define DRAMTMG4_TRRD(x)	((x) <<  8)
-#define DRAMTMG4_TRP(x)		((x) <<  0)
+#define DRAMTMG2_TCWL(x)	(MCTL_DIV2(x) << 24)
+#define DRAMTMG2_TCL(x)		(MCTL_DIV2(x) << 16)
+#define DRAMTMG2_TRD2WR(x)	(MCTL_DIV2(x) <<  8)
+#define DRAMTMG2_TWR2RD(x)	(MCTL_DIV2(x) <<  0)
 
-#define DRAMTMG5_TCKSRX(x)	((x) << 24)
-#define DRAMTMG5_TCKSRE(x)	((x) << 16)
-#define DRAMTMG5_TCKESR(x)	((x) <<  8)
-#define DRAMTMG5_TCKE(x)	((x) <<  0)
+#define DRAMTMG3_TMRW(x)	(MCTL_DIV2(x) << 16)
+#define DRAMTMG3_TMRD(x)	(MCTL_DIV2(x) << 12)
+#define DRAMTMG3_TMOD(x)	(MCTL_DIV2(x) <<  0)
 
-#define RFSHTMG_TREFI(x)	((x) << 16)
-#define RFSHTMG_TRFC(x)		((x) <<  0)
+#define DRAMTMG4_TRCD(x)	(MCTL_DIV2(x) << 24)
+#define DRAMTMG4_TCCD(x)	(MCTL_DIV2(x) << 16)
+#define DRAMTMG4_TRRD(x)	(MCTL_DIV2(x) <<  8)
+
+/* For MEMC_FREQ_RATIO=2 configurations, t_rp should be set to
+   RoundDown(RoundUp(tRP/tCK)/2) + 1. */
+#define DRAMTMG4_TRP(x)		(((x/2) + 1) <<  0)
+
+#define DRAMTMG5_TCKSRX(x)	(MCTL_DIV2(x) << 24)
+#define DRAMTMG5_TCKSRE(x)	(MCTL_DIV2(x) << 16)
+#define DRAMTMG5_TCKESR(x)	(MCTL_DIV2(x) <<  8)
+#define DRAMTMG5_TCKE(x)	(MCTL_DIV2(x) <<  0)
+
+#define RFSHTMG_TREFI(x)	(MCTL_DIV32(x) << 16)
+#define RFSHTMG_TRFC(x)		(MCTL_DIV2(x) <<  0)
 
 #define PIR_CLRSR	(0x1 << 27)	/* clear status registers */
 #define PIR_QSGATE	(0x1 << 10)	/* Read DQS gate training */
@@ -190,5 +216,33 @@ struct sunxi_mctl_ctl_reg {
 
 #define DXBDLR_WRITE_DELAY(x)	((x) << 8)
 #define DXBDLR_READ_DELAY(x)	((x) << 0)
+
+/* ODT configuration register
+ *
+ * wr_odt_hold:
+ *   Cycles to hold ODT for a write command.
+ *   For DDR3 (using BL=8), this is recommended to be 6.
+ *
+ * wr_odt_delay:
+ *   The delay, in clock cycles, from issuing a write command to
+ *   setting ODT values associated with that command. ODT setting
+ *   must remain constant for the entire time that DQS is driven.
+ *   For DDR3, this is recommended to be 0.
+ *
+ * rd_odt_hold:
+ *   Cycles to hold ODT for a read command.
+ *   For DDR3 (using BL=8), this is recommended to be 6.
+ *
+ * rd_odt_delay:
+ *   The delay, in clock cycles, from issuing a read command to
+ *   setting ODT values associated with that command. ODT setting
+ *   must remain constant for the entire time that DQS is driven.
+ *   For DDR3, this is recommended to be (CL-CWL).
+ */
+
+#define ODTCFG_WR_ODT_HOLD(x)  (((x) & 0x0f) << 24)
+#define ODTCFG_WR_ODT_DELAY(x) (((x) & 0x1f) << 16)
+#define ODTCFG_RD_ODT_HOLD(x)  (((x) & 0x0f) <<  8)
+#define ODTCFG_RD_ODT_DELAY(x) (((x) & 0x1f) <<  0)
 
 #endif /* _SUNXI_DRAM_SUN8I_H3_H */
