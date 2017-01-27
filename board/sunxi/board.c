@@ -747,7 +747,9 @@ static void parse_spl_header(const uint32_t spl_addr)
 static void setup_environment(const void *fdt)
 {
 	int ret;
+	int i;
 	char serial_string[17] = { 0 };
+	char ethaddr[16] = { 0 };
 	uint8_t mac_addr[6];
 	unsigned int sid[4];
 
