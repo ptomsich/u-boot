@@ -988,16 +988,27 @@ U_BOOT_CMD(
 #endif
 
 
-#ifdef CONFIG_SPL_LOAD_FIT
 int board_fit_config_name_match(const char *name)
 {
-#ifdef CONFIG_MACH_SUN50I
-	if ((gd->ram_size > 512 * 1024 * 1024))
-		return !strcmp(name, "sun50i-a64-pine64-plus");
-	else
-		return !strcmp(name, "sun50i-a64-pine64");
+#ifdef CONFIG_SPL_LOAD_FIT
+	const char *cmp_str;
+
+#ifdef CONFIG_DEFAULT_DEVICE_TREE
+	cmp_str = CONFIG_DEFAULT_DEVICE_TREE;
+#else
+	return 0;
 #endif
-	return -1;
+
+	/* Differentiate the two Pine64 board DTs by their DRAM size. */
+	if (strstr(name, "-pine64") && strstr(cmp_str, "-pine64")) {
+		if ((gd->ram_size > 512 * 1024 * 1024))
+			return !strstr(name, "plus");
+		else
+			return !!strstr(name, "plus");
+	} else {
+		return strcmp(name, cmp_str);
+	}
+#endif
 }
-#endif
+
 

@@ -168,10 +168,15 @@ choice
 	optional
 
 config SUNXI_PANGOLIN
-	bool "Theobroma A31 uQ7 Board"
+	bool "Theobroma Systems A31-uQ7 Board"
+	depends on MACH_SUN6I
 	select DM_SPI
 	select DM_SPI_FLASH
 	select CMD_SF
+
+config SUNXI_LYNX
+        bool "Theobroma Systems A64-uQ7 Board"
+        depends on MACH_SUN50I
 
 endchoice
 
