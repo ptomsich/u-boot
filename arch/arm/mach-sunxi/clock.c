@@ -43,6 +43,7 @@ int clock_twi_onoff(int port, int state)
 	struct sunxi_ccm_reg *const ccm =
 		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 
+#if !defined(CONFIG_MACH_SUN50I)
 	if (port == 5) {
 		if (state)
 			prcm_apb0_enable(
@@ -52,6 +53,7 @@ int clock_twi_onoff(int port, int state)
 				PRCM_APB0_GATE_PIO | PRCM_APB0_GATE_I2C);
 		return 0;
 	}
+#endif
 
 	/* set the apb clock gate and reset for twi */
 	if (state) {
