@@ -374,6 +374,11 @@ extern int soft_i2c_gpio_scl;
 #define CONFIG_PHY_MICREL_KSZ9031
 #endif
 
+#ifdef CONFIG_SUN8I_EMAC
+#define CONFIG_PHY_MICREL
+#define CONFIG_PHY_MICREL_KSZ9031
+#endif
+
 #ifdef CONFIG_USB_EHCI_HCD
 #define CONFIG_USB_OHCI_NEW
 #define CONFIG_USB_OHCI_SUNXI
