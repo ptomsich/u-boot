@@ -19,7 +19,7 @@
 #include <errno.h>
 
 #define SUNXI_USB_PMU_IRQ_ENABLE	0x800
-#ifdef CONFIG_MACH_SUN8I_A33
+#if defined(CONFIG_MACH_SUN8I_A33) || defined(CONFIG_MACH_SUN50I)
 #define SUNXI_USB_CSR			0x410
 #else
 #define SUNXI_USB_CSR			0x404
@@ -31,8 +31,10 @@
 #define SUNXI_EHCI_AHB_INCRX_ALIGN_EN	(1 << 8)
 #define SUNXI_EHCI_ULPI_BYPASS_EN	(1 << 0)
 
+#if defined(CONFIG_MACH_SUN8I_H3)
 #define REG_PHY_UNK_H3			0x420
 #define REG_PMU_UNK_H3			0x810
+#endif
 
 /* A83T specific control bits for PHY0 */
 #define SUNXI_PHY_CTL_VBUSVLDEXT	BIT(5)
@@ -146,13 +148,21 @@ __maybe_unused static void usb_phy_write(struct sunxi_usb_phy *phy, int addr,
 	}
 }
 
-#if defined(CONFIG_MACH_SUN8I_H3) || defined(CONFIG_MACH_SUN50I)
+#if defined(CONFIG_MACH_SUN8I_H3)
 static void sunxi_usb_phy_config(struct sunxi_usb_phy *phy)
 {
-#if defined CONFIG_MACH_SUN8I_H3
+	/* This function performs similar initialisation to what we do
+	 * for the A64: routing PHY 0 to the OTG controller and what
+	 * the 3.10 kernel calls 'clearing SIDDP'.
+	 *
+	 * Refer to musb-new/sunxi.c and ehci-sunxi.c for the call-sites
+	 * (conditional on CONFIG_MACH_SUN50I) to determine suitability
+	 * for the H3.
+	 */
+
 	if (phy->id == 0)
 		clrbits_le32(SUNXI_USBPHY_BASE + REG_PHY_UNK_H3, 0x01);
-#endif
+
 	clrbits_le32(phy->base + REG_PMU_UNK_H3, 0x02);
 }
 #elif defined CONFIG_MACH_SUN8I_A83T
@@ -162,18 +172,14 @@ static void sunxi_usb_phy_config(struct sunxi_usb_phy *phy)
 #else
 static void sunxi_usb_phy_config(struct sunxi_usb_phy *phy)
 {
-	/* The following comments are machine
-	 * translated from Chinese, you have been warned!
-	 */
-
-	/* Regulation 45 ohms */
+	/* adjust the 45 ohm resistor */
 	if (phy->id == 0)
 		usb_phy_write(phy, 0x0c, 0x01, 1);
 
-	/* adjust PHY's magnitude and rate */
+	/* adjust PHY range and rate */
 	usb_phy_write(phy, 0x20, 0x14, 5);
 
-	/* threshold adjustment disconnect */
+	/* adjust disconnect threshold */
 #if defined CONFIG_MACH_SUN5I || defined CONFIG_MACH_SUN7I
 	usb_phy_write(phy, 0x2a, 2, 2);
 #else
@@ -184,8 +190,20 @@ static void sunxi_usb_phy_config(struct sunxi_usb_phy *phy)
 }
 #endif
 
-static void sunxi_usb_phy_passby(struct sunxi_usb_phy *phy, int enable)
+#if defined(CONFIG_MACH_SUN50I)
+void sunxi_usb_phy_clear_SIDDP(void* base)
 {
+	/* We pretend that this is always at the same offset (0x410), even though
+	 * it is 0x410 for MUSB/OTG and OHCI, but 0x810 for EHCI.  The EHCI call
+	 * site will have to adjust this...
+	 */
+	clrbits_le32(base + SUNXI_USB_CSR, (1 << 1));
+}
+#endif
+
+void sunxi_usb_phy_passby(int index, bool enable)
+{
+	struct sunxi_usb_phy *phy = &sunxi_usb_phy[index];
 	unsigned long bits = 0;
 	void *addr;
 
@@ -233,9 +251,6 @@ void sunxi_usb_phy_init(int index)
 
 	sunxi_usb_phy_config(phy);
 
-	if (phy->id != 0)
-		sunxi_usb_phy_passby(phy, SUNXI_USB_PASSBY_EN);
-
 #ifdef CONFIG_MACH_SUN8I_A83T
 	if (phy->id == 0) {
 		setbits_le32(SUNXI_USB0_BASE + SUNXI_USB_CSR,
@@ -254,9 +269,6 @@ void sunxi_usb_phy_exit(int index)
 	phy->init_count--;
 	if (phy->init_count != 0)
 		return;
-
-	if (phy->id != 0)
-		sunxi_usb_phy_passby(phy, !SUNXI_USB_PASSBY_EN);
 
 #ifdef CONFIG_MACH_SUN8I_A83T
 	if (phy->id == 0) {

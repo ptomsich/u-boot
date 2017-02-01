@@ -66,13 +66,17 @@
 #endif
 #ifdef CONFIG_SUNXI_GEN_SUN6I
 #if defined(CONFIG_MACH_SUN8I_H3) || defined(CONFIG_MACH_SUN50I)
-#define SUNXI_USBPHY_BASE		0x01c19000
+#define SUNXI_MUSB_BASE                 0x01c19000
 #define SUNXI_USB0_BASE			0x01c1a000
 #define SUNXI_USB1_BASE			0x01c1b000
+#if defined(CONFIG_MACH_SUN8I_H3)
+#define SUNXI_USBPHY_BASE		SUNXI_MUSB_BASE
 #define SUNXI_USB2_BASE			0x01c1c000
 #define SUNXI_USB3_BASE			0x01c1d000
+#endif
 #else
 #define SUNXI_USB0_BASE			0x01c19000
+#define SUNXI_MUSB_BASE                 SUNXI_USB0_BASE
 #define SUNXI_USB1_BASE			0x01c1a000
 #define SUNXI_USB2_BASE			0x01c1b000
 #endif
