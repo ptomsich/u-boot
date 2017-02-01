@@ -250,11 +250,21 @@ struct sunxi_ccm_reg {
 #define AHB_GATE_OFFSET_USB_EHCI2	27
 #define AHB_GATE_OFFSET_USB_EHCI1	26
 #define AHB_GATE_OFFSET_USB_EHCI0	25
+#define AHB_GATE_OFFSET_USB0		24
+#elif defined(CONFIG_MACH_SUN50I)
+#define AHB_GATE_OFFSET_USB_OHCI0       29
+#define AHB_GATE_OFFSET_USBOTG_OHCI     28
+#define AHB_GATE_OFFSET_USB_EHCI0       25
+#define AHB_GATE_OFFSET_USBOTG_EHCI     24
+#define AHB_GATE_OFFSET_USBOTG          23
+/* The musb-new/sunxi.c glue uses AHB_GATE_OFFSET_USB0 for the MUSB OTG
+   block, so we define it to what it expects. */
+#define AHB_GATE_OFFSET_USB0            AHB_GATE_OFFSET_USBOTG
 #else
 #define AHB_GATE_OFFSET_USB_EHCI1	27
 #define AHB_GATE_OFFSET_USB_EHCI0	26
-#endif
 #define AHB_GATE_OFFSET_USB0		24
+#endif
 #define AHB_GATE_OFFSET_MCTL		14
 #define AHB_GATE_OFFSET_GMAC		17
 #define AHB_GATE_OFFSET_NAND0		13
