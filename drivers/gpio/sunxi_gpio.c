@@ -353,6 +353,12 @@ static const struct udevice_id sunxi_gpio_ids[] = {
 	ID("allwinner,sun8i-a83t-pinctrl",	a_all),
 	ID("allwinner,sun8i-h3-pinctrl",	a_all),
 	ID("allwinner,sun9i-a80-pinctrl",	a_all),
+	/* This is not strictly correct for the A64, as it is missing
+	 * bank 'A'. Yet, the register layout in the pinctrl block is
+	 * backward compatible and any accesses to the registers that
+	 * normally control bank 'A' will have no adverse effect.
+	 */
+	ID("allwinner,sun50i-a64-pinctrl",      a_all),
 	ID("allwinner,sun6i-a31-r-pinctrl",	l_2),
 	ID("allwinner,sun8i-a23-r-pinctrl",	l_1),
 	ID("allwinner,sun8i-a83t-r-pinctrl",	l_1),
