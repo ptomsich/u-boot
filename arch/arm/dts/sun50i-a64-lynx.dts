@@ -89,7 +89,7 @@
 
 		power {
 			label = "lynx:orange:power";
-			gpios = <&pio 9 11 GPIO_ACTIVE_HIGH>;
+			gpios = <&r_pio 0 11 GPIO_ACTIVE_HIGH>;
 		};
 	};
 };

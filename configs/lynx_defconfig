@@ -21,6 +21,8 @@ CONFIG_USB_EHCI_HCD=y
 CONFIG_CMD_MMC=y
 CONFIG_MMC_SUNXI_SLOT_EXTRA=2
 
+CONFIG_LED=y
+CONFIG_LED_GPIO=y
 
 # Support for running the dual-role controller in device-mode
 CONFIG_USB_MUSB_GADGET=y
