@@ -12,6 +12,7 @@
 
 #include <common.h>
 #include <asm/arch/clock.h>
+#include <asm/gpio.h>
 #include <asm/arch/usb_phy.h>
 #include <asm/io.h>
 #include <dm.h>
@@ -29,7 +30,22 @@ struct ehci_sunxi_priv {
 	struct ehci_ctrl ehci;
 	int ahb_gate_mask; /* Mask of ahb_gate0 clk gate bits for this hcd */
 	int phy_index;     /* Index of the usb-phy attached to this hcd */
+	struct gpio_desc enable_gpios[4];  /* GPIOs to enable/power external components
+					      on the USB bus (e.g. PHYs or hubs) */
 };
+
+static int ehci_ofdata_to_platdata(struct udevice *dev)
+{
+	struct ehci_sunxi_priv *priv = dev_get_priv(dev);
+	int ret = 0;
+
+	ret = gpio_request_list_by_name(dev, "enable-gpios", priv->enable_gpios,
+					ARRAY_SIZE(priv->enable_gpios), GPIOD_IS_OUT);
+	if (ret < 0)
+		printf("no enable-gpios defined\n");
+
+	return 0;
+}
 
 static int ehci_usb_probe(struct udevice *dev)
 {
@@ -39,6 +55,7 @@ static int ehci_usb_probe(struct udevice *dev)
 	struct ehci_hccr *hccr = (struct ehci_hccr *)dev_get_addr(dev);
 	struct ehci_hcor *hcor;
 	int extra_ahb_gate_mask = 0;
+	int i;
 
 	/*
 	 * This should go away once we've moved to the driver model for
@@ -76,6 +93,14 @@ static int ehci_usb_probe(struct udevice *dev)
 	sunxi_usb_phy_passby(priv->phy_index, true);
 	sunxi_usb_phy_power_on(priv->phy_index);
 
+	/* Enable any GPIOs used to turn on devices on the bus. */
+	for (i = 0; i < ARRAY_SIZE(priv->enable_gpios); ++i) {
+		if (!dm_gpio_is_valid(&priv->enable_gpios[i]))
+			break;
+
+		dm_gpio_set_value(&priv->enable_gpios[i], 1);
+	}
+
 	hcor = (struct ehci_hcor *)((uintptr_t)hccr +
 				    HC_LENGTH(ehci_readl(&hccr->cr_capbase)));
 
@@ -86,6 +111,7 @@ static int ehci_usb_remove(struct udevice *dev)
 {
 	struct sunxi_ccm_reg *ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 	struct ehci_sunxi_priv *priv = dev_get_priv(dev);
+	int i;
 	int ret;
 
 	ret = ehci_deregister(dev);
@@ -95,12 +121,24 @@ static int ehci_usb_remove(struct udevice *dev)
 	sunxi_usb_phy_passby(priv->phy_index, false);
 	sunxi_usb_phy_exit(priv->phy_index);
 
+	/* Disable any GPIOs used to turn on devices on the bus.
+	 * Once the PHY has been disabled, there's no point in keeping
+	 * any devices powered that we could disable.
+	 */
+	for (i = 0; i < ARRAY_SIZE(priv->enable_gpios); ++i) {
+		if (!dm_gpio_is_valid(&priv->enable_gpios[i]))
+			break;
+
+		dm_gpio_set_value(&priv->enable_gpios[i], 0);
+		dm_gpio_free(dev, &priv->enable_gpios[i]);
+	}
+
 #ifdef CONFIG_SUNXI_GEN_SUN6I
 	clrbits_le32(&ccm->ahb_reset0_cfg, priv->ahb_gate_mask);
 #endif
 	clrbits_le32(&ccm->ahb_gate0, priv->ahb_gate_mask);
 
-	return 0;
+	return ret;
 }
 
 static const struct udevice_id ehci_usb_ids[] = {
@@ -120,6 +158,7 @@ U_BOOT_DRIVER(ehci_sunxi) = {
 	.name	= "ehci_sunxi",
 	.id	= UCLASS_USB,
 	.of_match = ehci_usb_ids,
+	.ofdata_to_platdata = ehci_ofdata_to_platdata,
 	.probe = ehci_usb_probe,
 	.remove = ehci_usb_remove,
 	.ops	= &ehci_usb_ops,

@@ -173,5 +173,6 @@
 };
 
 &ehci1 {
+       enable-gpios = <&pio 6 9 GPIO_ACTIVE_HIGH>, <&pio 4 4 GPIO_ACTIVE_HIGH>;
        status = "okay";
 };
