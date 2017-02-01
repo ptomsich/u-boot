@@ -313,6 +313,8 @@ extern int soft_i2c_gpio_scl;
 
 #ifdef CONFIG_SUN8I_EMAC
 #define CONFIG_PHY_GIGE			/* GMAC can use gigabit PHY	*/
+#define CONFIG_PHY_MICREL
+#define CONFIG_PHY_MICREL_KSZ9031       /* used on A64-uQ7              */
 #endif
 
 #ifdef CONFIG_USB_EHCI_HCD
