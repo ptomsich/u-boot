@@ -45,6 +45,10 @@
 #define  USBC_REG_o_PHYBIST	0x0408
 #define  USBC_REG_o_PHYTUNE	0x040c
 
+#if defined(CONFIG_MACH_SUN50I)
+#define  SUNXI_OTG_PHY_CFG      0x0420
+#endif
+
 #define  USBC_REG_o_VEND0	0x0043
 
 /* Interface Status and Control */
@@ -152,14 +156,19 @@ static void USBC_ForceVbusValidToHigh(__iomem void *base)
 
 static void USBC_ConfigFIFO_Base(void)
 {
-	u32 reg_value;
-
 	/* config usb fifo, 8kb mode */
-	reg_value = readl(SUNXI_SRAMC_BASE + 0x04);
-	reg_value &= ~(0x03 << 0);
-	reg_value |= (1 << 0);
-	writel(reg_value, SUNXI_SRAMC_BASE + 0x04);
+	clrsetbits_le32(SUNXI_SRAMC_BASE + 0x04, 0x3, 0x1);
 }
+
+#if defined(CONFIG_MACH_SUN50I)
+static void USBC_SelectPhyToDevice(__iomem void *base, bool routePHYtoOTG)
+{
+	/* The OTG and HCI0 controllers share a single PHY in the A64.
+	 * Select either 'to OTG' (1) or 'to HCI' (0).
+	 */
+	clrsetbits_le32(base + SUNXI_OTG_PHY_CFG, 1, routePHYtoOTG ? 1 : 0);
+}
+#endif
 
 /******************************************************************************
  * Needed for the DFU polling magic
@@ -265,7 +274,12 @@ static int sunxi_musb_init(struct musb *musb)
 #ifdef CONFIG_SUNXI_GEN_SUN6I
 	setbits_le32(&ccm->ahb_reset0_cfg, 1 << AHB_GATE_OFFSET_USB0);
 #endif
+
 	sunxi_usb_phy_init(0);
+#if defined(CONFIG_MACH_SUN50I)
+	sunxi_usb_phy_clear_SIDDP(musb->mregs);
+	USBC_SelectPhyToDevice(musb->mregs, true);
+#endif
 
 	USBC_ConfigFIFO_Base();
 	USBC_EnableDpDmPullUp(musb->mregs);
@@ -319,7 +333,7 @@ static int musb_usb_probe(struct udevice *dev)
 	priv->desc_before_addr = true;
 
 	host->host = musb_init_controller(&musb_plat, NULL,
-					  (void *)SUNXI_USB0_BASE);
+					  (void *)SUNXI_MUSB_BASE);
 	if (!host->host)
 		return -EIO;
 
@@ -340,6 +354,10 @@ static int musb_usb_remove(struct udevice *dev)
 	musb_stop(host->host);
 
 	sunxi_usb_phy_exit(0);
+#if defined(CONFIG_MACH_SUN50I)
+	USBC_SelectPhyToDevice(musb->mregs, false);
+#endif
+
 #ifdef CONFIG_SUNXI_GEN_SUN6I
 	clrbits_le32(&ccm->ahb_reset0_cfg, 1 << AHB_GATE_OFFSET_USB0);
 #endif
@@ -375,6 +393,6 @@ void sunxi_musb_board_init(void)
 	 */
 	device_bind_driver(dm_root(), "sunxi-musb", "sunxi-musb", &dev);
 #else
-	musb_register(&musb_plat, NULL, (void *)SUNXI_USB0_BASE);
+	musb_register(&musb_plat, NULL, (void *)SUNXI_MUSB_BASE);
 #endif
 }

@@ -66,6 +66,13 @@ static int ohci_usb_probe(struct udevice *dev)
 #endif
 
 	sunxi_usb_phy_init(priv->phy_index);
+#if defined(CONFIG_MACH_SUN50I)
+	/* For the HCI blocks, the PHYCTL register is at 0x810, so it's
+	   an extra 0x400 for the EHCI block.  This should go away once
+	   the PHYs use the driver model.  */
+	sunxi_usb_phy_clear_SIDDP(regs);
+#endif
+	sunxi_usb_phy_passby(priv->phy_index, true);
 	sunxi_usb_phy_power_on(priv->phy_index);
 
 	return ohci_register(dev, regs);
@@ -81,6 +88,7 @@ static int ohci_usb_remove(struct udevice *dev)
 	if (ret)
 		return ret;
 
+	sunxi_usb_phy_passby(priv->phy_index, false);
 	sunxi_usb_phy_exit(priv->phy_index);
 
 #ifdef CONFIG_SUNXI_GEN_SUN6I
