@@ -1,0 +1,42 @@
+/dts-v1/;
+
+/ {
+	description = "Configuration to load ATF before U-Boot";
+	#address-cells = <1>;
+
+	images {
+		uboot@1 {
+			description = "U-Boot (64-bit)";
+			data = /incbin/("../../u-boot-nodtb.bin");
+			type = "standalone";
+			arch = "arm64";
+			compression = "none";
+			load = <0x4a000000>;
+		};
+		atf@1 {
+			description = "ARM Trusted Firmware";
+			data = /incbin/("../../bl31.bin");
+			type = "firmware";
+			arch = "arm64";
+			compression = "none";
+			load = <0x44000>;
+			entry = <0x44000>;
+		};
+		fdt@1 {
+			description = "A64-uQ7 Lynx DT";
+			data = /incbin/("../../arch/arm/dts/sun50i-a64-lynx.dtb");
+                        type = "flat_dt";
+			compression = "none";
+		};
+	};
+	configurations {
+		default = "config@1";
+
+		config@1 {
+			description = "sun50i-a64-lynx";
+			firmware = "uboot@1";
+			loadables = "atf@1";
+			fdt = "fdt@1";
+		};
+	};
+};
