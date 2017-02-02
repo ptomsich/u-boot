@@ -2,7 +2,8 @@
  * SPI driver for Allwinner sunxi SoCs
  *
  * Supported chips
- * - Allwinner A31 (sun6i)
+ * - Allwinner A31 (sun6i, sun8iw1p1)
+ * - Allwinner A64 (sun50iw1p1)
  *
  * Copyright (C) 2015 Theobroma Systems Design und Consulting GmbH
  * Octav Zlatior <octav.zlatior@theobroma-systems.com>
@@ -36,12 +37,23 @@
 #define SUNXI_SPI0_MOSI_PIN		SUNXI_GPC(0)
 #define SUNXI_SPI0_MISO_PIN		SUNXI_GPC(1)
 #define SUNXI_SPI0_CLK_PIN		SUNXI_GPC(2)
+#if defined(CONFIG_MACH_SUN50I)
+#define SUNXI_SPI0_CS0_PIN              SUNXI_GPC(3)
+#else
 #define SUNXI_SPI0_CS0_PIN		SUNXI_GPC(27)
+#endif
 #define SUNXI_SPI0_CS1_PIN		-1
+#if defined(CONFIG_MACH_SUN50I)
+#define SUNXI_SPI0_MOSI_VAL		4
+#define SUNXI_SPI0_MISO_VAL		4
+#define SUNXI_SPI0_CLK_VAL		4
+#define SUNXI_SPI0_CS0_VAL		4
+#else
 #define SUNXI_SPI0_MOSI_VAL		3
 #define SUNXI_SPI0_MISO_VAL		3
 #define SUNXI_SPI0_CLK_VAL		3
 #define SUNXI_SPI0_CS0_VAL		3
+#endif
 #define SUNXI_SPI0_CS1_VAL		-1
 
 #define SUNXI_SPI1_MOSI_PIN		SUNXI_GPG(15)

@@ -53,6 +53,7 @@
 	aliases {
 		serial0 = &uart0;
 		ethernet0 = &emac;
+		spi0 = &spi0;
 	};
 
 	soc {
@@ -187,4 +188,18 @@
 &ehci1 {
        enable-gpios = <&pio 6 9 GPIO_ACTIVE_HIGH>, <&pio 4 4 GPIO_ACTIVE_HIGH>;
        status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+
+        flash0: m25p80@0 {
+                #address-cells = <1>;
+                #size-cells = <1>;
+                compatible = "spi-flash";
+                spi-max-frequency = <16000000>;
+		spi-cpol;
+		spi-cpha;
+                reg = <0>;
+        };
 };

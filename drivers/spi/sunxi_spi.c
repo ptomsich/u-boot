@@ -14,6 +14,8 @@
  * the License, or (at your option) any later version.
  */
 
+#define DEBUG
+
 #include <common.h>
 #include <dm.h>
 #include <spi.h>
@@ -331,6 +333,7 @@ static int sunxi_spi_init(struct udevice *dev) {
 
 static int sunxi_spi_probe(struct udevice *dev) {
 	debug("%s: %p\n", __func__, dev);
+	printf("*** sunxi_spi_probe ***\n");
 	if (!dev)
 		return -ENODEV;
 
@@ -439,37 +442,41 @@ static int sunxi_spi_release_bus(struct udevice *dev) {
 	struct sunxi_ccm_reg* const ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
 	struct sunxi_spi_reg* spi = (struct sunxi_spi_reg *)plat->base;
 
+	debug("%s: seq = %d, spi base = %p\n",__func__,  seq, spi);
+
+#if 0
 	sunxi_gpio_set_cfgpin(sunxi_spi_mosi_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 	sunxi_gpio_set_cfgpin(sunxi_spi_miso_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 	sunxi_gpio_set_cfgpin(sunxi_spi_clk_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 	sunxi_gpio_set_cfgpin(sunxi_spi_cs0_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 	sunxi_gpio_set_cfgpin(sunxi_spi_cs1_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 
-	switch (seq) {
-		case 0:
-			clrbits_le32(&ccm->spi0_clk_cfg, (1 << 31));
-			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI0);
-			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI0);
-			break;
-		case 1:
-			clrbits_le32(&ccm->spi1_clk_cfg, (1 << 31));
-			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI1);
-			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI1);
-			break;
-		case 2:
-			clrbits_le32(&ccm->spi2_clk_cfg, (1 << 31));
-			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI2);
-			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI2);
-			break;
-		case 3:
-			clrbits_le32(&ccm->spi3_clk_cfg, (1 << 31));
-			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI3);
-			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI3);
-			break;
-	}
-
 	clrbits_le32(&spi->GCR, SUNXI_SPI_GCR_MASTER | SUNXI_SPI_GCR_EN);
 	clrbits_le32(&spi->TCR, SUNXI_SPI_CPOL_LOW | SUNXI_SPI_CPOL_LOW);
+
+	switch (seq) {
+		case 0:
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI0);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI0);
+			clrbits_le32(&ccm->spi0_clk_cfg, (1 << 31));
+			break;
+		case 1:
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI1);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI1);
+			clrbits_le32(&ccm->spi1_clk_cfg, (1 << 31));
+			break;
+		case 2:
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI2);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI2);
+			clrbits_le32(&ccm->spi2_clk_cfg, (1 << 31));
+			break;
+		case 3:
+			clrbits_le32(&ccm->ahb_gate0, CCM_AHB_GATE_SPI3);
+			clrbits_le32(&ccm->ahb_reset0_cfg, CCM_AHB_RESET_SPI3);
+			clrbits_le32(&ccm->spi3_clk_cfg, (1 << 31));
+			break;
+	}
+#endif
 
 	return 0;
 };
