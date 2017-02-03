@@ -300,34 +300,30 @@ static int sunxi_spi_ofdata_to_platdata(struct udevice *dev) {
 	struct sunxi_spi_platdata *plat = dev_get_platdata(dev);
 	const void *blob = gd->fdt_blob;
 	int node = dev->of_offset;
-	u32 data[2];
-	int ret;
+        fdt_addr_t addr;
+	fdt_size_t size;
 
-	ret = fdtdec_get_int_array(blob, node, "reg", data, ARRAY_SIZE(data));
-	if (ret) {
-		printf("Error: Can't get base address (ret=%d)\n", ret);
+	addr = fdtdec_get_addr_size_auto_noparent(gd->fdt_blob, dev->of_offset,
+						  "reg", 0, &size, false);
+	if (addr == FDT_ADDR_T_NONE) {
+		debug("%s: failed to find base address ('reg')\n", dev->name);
 		return -ENODEV;
 	}
-
-	plat->base = data[0];
+	plat->base = (void*)addr;
 	plat->max_hz = fdtdec_get_int(blob, node, "spi-max-frequency", 24000000);
 
-	debug("%s: base=%x, max-frequency=%d\n",
-		__func__, plat->base, plat->max_hz);
+	debug("%s: base=%p, max-frequency=%d size=%d\n",
+	      __func__, plat->base, plat->max_hz, size);
 
 	return 0;
 };
 
 static int sunxi_spi_init(struct udevice *dev) {
-	debug("%s: %p\n", __func__, dev);
 	if (!dev)
 		return -ENODEV;
 
-	struct sunxi_spi_platdata *plat = dev_get_platdata(dev);
-	struct sunxi_spi_reg *spi = (struct sunxi_spi_reg *)plat->base;
-	u32 spi_ver = readl(&spi->VER);
-	printf("sunxi SPI @0x%08x, version %d.%d\n",
-		plat->base, spi_ver >> 16, spi_ver & 0xffff);
+	debug("%s: %s\n", dev->name, __func__);
+
 	return 0;
 };
 
@@ -444,12 +440,13 @@ static int sunxi_spi_release_bus(struct udevice *dev) {
 
 	debug("%s: seq = %d, spi base = %p\n",__func__,  seq, spi);
 
-#if 0
 	sunxi_gpio_set_cfgpin(sunxi_spi_mosi_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 	sunxi_gpio_set_cfgpin(sunxi_spi_miso_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 	sunxi_gpio_set_cfgpin(sunxi_spi_clk_pin[seq], SUNXI_PIN_INPUT_DISABLE);
-	sunxi_gpio_set_cfgpin(sunxi_spi_cs0_pin[seq], SUNXI_PIN_INPUT_DISABLE);
-	sunxi_gpio_set_cfgpin(sunxi_spi_cs1_pin[seq], SUNXI_PIN_INPUT_DISABLE);
+	if (sunxi_spi_cs0_pin[seq] != -1)
+	  sunxi_gpio_set_cfgpin(sunxi_spi_cs0_pin[seq], SUNXI_PIN_INPUT_DISABLE);
+	if (sunxi_spi_cs1_pin[seq] != -1)
+	  sunxi_gpio_set_cfgpin(sunxi_spi_cs1_pin[seq], SUNXI_PIN_INPUT_DISABLE);
 
 	clrbits_le32(&spi->GCR, SUNXI_SPI_GCR_MASTER | SUNXI_SPI_GCR_EN);
 	clrbits_le32(&spi->TCR, SUNXI_SPI_CPOL_LOW | SUNXI_SPI_CPOL_LOW);
@@ -476,7 +473,6 @@ static int sunxi_spi_release_bus(struct udevice *dev) {
 			clrbits_le32(&ccm->spi3_clk_cfg, (1 << 31));
 			break;
 	}
-#endif
 
 	return 0;
 };

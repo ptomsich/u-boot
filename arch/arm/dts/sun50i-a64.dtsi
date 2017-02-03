@@ -706,16 +706,14 @@
 
 		spi0: spi@01c68000 {
 			compatible = "allwinner,sun6i-a31-spi";
-			reg = <0x01c68000 0x1000>;
+			reg = <0x0 0x01c68000 0x0 0x1000>;
 			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
 		};
 
 		spi1: spi@01c69000 {
 			compatible = "allwinner,sun6i-a31-spi";
-                        #address-cells = <1>;
-                        #size-cells = <0>;
-			reg = <0x01c69000 0x1000>;
+			reg = <0x0 0x01c69000 0x0 0x1000>;
 			interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
 		};

@@ -113,13 +113,13 @@
 
 struct sunxi_spi_platdata {
 	unsigned int max_hz;
-	unsigned int base;
+	void* base;
 };
 
 struct sunxi_spi_privdata {
 #if !defined(CONFIG_DM_SPI)
 	struct spi_slave slave;
-        unsigned int base;
+        void* base;
 #endif
 	u8 spi_is_init;
 	u8 clk_pol;
@@ -129,7 +129,7 @@ struct sunxi_spi_privdata {
 };
 
 struct sunxi_spi_reg {
-	u32		VER;   /* SPI Version Number register */
+	u32		_reserved0;
 	u32		GCR;   /* SPI Global Control register */
 	u32		TCR;   /* SPI Transfer Control register */
 	u32		_reserved1;
