@@ -30,6 +30,8 @@
 #include <crc.h>
 #include <environment.h>
 #include <libfdt.h>
+#include <fdtdec.h>
+#include <led.h>
 #include <nand.h>
 #include <net.h>
 #include <sy8106a.h>
