@@ -353,18 +353,22 @@ static const struct udevice_id sunxi_gpio_ids[] = {
 	ID("allwinner,sun8i-a83t-pinctrl",	a_all),
 	ID("allwinner,sun8i-h3-pinctrl",	a_all),
 	ID("allwinner,sun9i-a80-pinctrl",	a_all),
+#if !defined(CONFIG_SUNXI_PINCTRL)
 	/* This is not strictly correct for the A64, as it is missing
 	 * bank 'A'. Yet, the register layout in the pinctrl block is
 	 * backward compatible and any accesses to the registers that
 	 * normally control bank 'A' will have no adverse effect.
 	 */
-	ID("allwinner,sun50i-a64-pinctrl",      a_all),
+	ID("allwinner,sun50i-a64-pinctrl",	a_all),
+#endif
 	ID("allwinner,sun6i-a31-r-pinctrl",	l_2),
 	ID("allwinner,sun8i-a23-r-pinctrl",	l_1),
 	ID("allwinner,sun8i-a83t-r-pinctrl",	l_1),
 	ID("allwinner,sun8i-h3-r-pinctrl",	l_1),
 	ID("allwinner,sun9i-a80-r-pinctrl",	l_3),
-	ID("allwinner,sun50i-a64-r-pinctrl",    l_1),
+#if !defined(CONFIG_SUNXI_PINCTRL)
+	ID("allwinner,sun50i-a64-r-pinctrl",	l_1),
+#endif
 	{ }
 };
 
@@ -376,4 +380,91 @@ U_BOOT_DRIVER(gpio_sunxi) = {
 	.bind	= gpio_sunxi_bind,
 	.probe	= gpio_sunxi_probe,
 };
+
+#if defined(CONFIG_SUNXI_PINCTRL)
+
+/* When we use the sunxi pinctrl infrastructure, we have two issues that
+ * are resolved by the gpiobank and gpiobrige drivers:
+ *
+ *  - We need to have a UCLASS_GPIO device bound to the pinctrl-nodes for
+ *    translating between gpio entries (e.g. <&pio 3 24 GPIO_ACTIVE_LOW>;)
+ *    in the DT and actual gpio banks. This is done using the gpiobridge
+ *    driver, which provides only a lookup/translation mechanism.
+ *    This mechanism lives in pinctrl-sunxi.c
+ *
+ *  - We introduce a generic gpiobank device, which resolves the need to
+ *    have distinct soc_data structure for each device and avoids having
+ *    to share data structures and config data between this file and the
+ *    sunxi pinctrl (the other option would be to have the soc_data info
+ *    visible in pinctrl-sunxi.c (or merge it into this file) and bind a
+ *    gpio_sunxi device that is set up with the appropriate soc_data) to
+ *    the same node as the pinctrl device.
+ */
+
+static int gpiobank_sunxi_probe(struct udevice *dev)
+{
+	struct sunxi_gpio_platdata *plat = dev_get_platdata(dev);
+	struct gpio_dev_priv *uc_priv = dev_get_uclass_priv(dev);
+	int bank_name;
+	int bank;
+	fdt_addr_t offset;
+	fdt_size_t size;
+	fdt_addr_t base;
+	struct sunxi_gpio_reg *ctlr;
+
+	debug("%s: %s", __func__, dev->name);
+
+	/* At this time we are only interested in index 0 (the PIO registers)
+	   and we ignore index 1 (the external interrupt control), even if
+	   present and an interrupt property exists... */
+	offset = fdtdec_get_addr_size_auto_noparent(gd->fdt_blob, dev->of_offset,
+						    "reg", 0, &size, false);
+	if (offset == FDT_ADDR_T_NONE) {
+		error("%s: missing 'reg' for offset into parent device\n", dev->name);
+		return -EINVAL;
+	}
+
+	bank_name = fdtdec_get_int(gd->fdt_blob, dev->of_offset,
+				   "allwinner,gpiobank-name", -EINVAL);
+	if (bank_name == -EINVAL) {
+		error("%s: missing 'allwinner,gpiobank-name'\n", dev->name);
+		return -EINVAL;
+	}
+
+	base = dev_get_addr(dev->parent);
+	if (base == FDT_ADDR_T_NONE) {
+		error("%s: parent '%s' does not have a valid base address\n",
+		      dev->name, dev->parent->name);
+		return -EINVAL;
+	}
+
+	bank = bank_name - 'A';
+
+	plat->regs = base + offset;
+	plat->gpio_count = SUNXI_GPIOS_PER_BANK;
+	plat->bank_name = gpio_bank_name(bank);
+
+	/* Tell the uclass how many GPIOs we have */
+	uc_priv->gpio_count = plat->gpio_count;
+	uc_priv->bank_name = plat->bank_name;
+
+	return 0;
+}
+
+static const struct udevice_id sunxi_gpiobank_ids[] = {
+        { .compatible = "allwinner,sunxi-gpiobank", },
+	{ }
+};
+
+U_BOOT_DRIVER(gpiobank_sunxi) = {
+	.name	= "gpiobank_sunxi",
+	.id	= UCLASS_GPIO,
+	.ops	= &gpio_sunxi_ops,
+	.of_match = sunxi_gpiobank_ids,
+	.platdata_auto_alloc_size = sizeof(struct sunxi_gpio_platdata),
+	.probe	= gpiobank_sunxi_probe,
+};
+
+#endif /* CONFIG_SUNXI_PINCTRL */
+
 #endif

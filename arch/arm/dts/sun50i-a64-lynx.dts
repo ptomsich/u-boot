@@ -70,18 +70,18 @@
 	};
 
 	/* There is a model with 2GB of DRAM, but U-Boot fixes this for us. */
-	memory {
+	memory@40000000 {
 		reg = <0x40000000 0x40000000>;
 	};
 
 	config {
-	       u-boot,boot-led = "lynx:orange:power";
+		u-boot,boot-led = "lynx:orange:power";
 	};
 
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
-		pinctrl-0 = <&led_pins_lynx>;
+		pinctrl-0 = <&led_pins_power>, <&led_pins_sdio>;
 
 		sdio {
 			label = "lynx:blue:sdio";
@@ -96,8 +96,24 @@
 };
 
 &pio {
-	led_pins_lynx: led_pins@0 {
-		allwinner,pins = "PH10", "PL11";
+	led_pins_sdio: led_pins_sdio {
+		allwinner,pins = "PH10";
+		allwinner,function = "gpio_out";
+		allwinner,drive = <SUN4I_PINCTRL_20_MA>;
+		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+	};
+
+	ethphy_reset_pin: ethphy_reset_pin {
+	        allwinner,pins = "PD24";
+		allwinner,function = "gpio_out";
+		drive-strength = < 20 >;
+		bias-disable;
+	};
+};
+
+&r_pio {
+	led_pins_power: led_pins_power {
+		allwinner,pins = "PL11";
 		allwinner,function = "gpio_out";
 		allwinner,drive = <SUN4I_PINCTRL_20_MA>;
 		allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
@@ -124,7 +140,7 @@
 
 &emac {
 	pinctrl-names = "default";
-	pinctrl-0 = <&rgmii_pins>;
+	pinctrl-0 = <&rgmii_pins>, <&ethphy_reset_pin>;
 	phy-mode = "rgmii";
 	phy = <&phy1>;
 	status = "okay";
@@ -192,10 +208,10 @@
 
 &spi0 {
 	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
 
         flash0: m25p80@0 {
-                #address-cells = <1>;
-                #size-cells = <1>;
                 compatible = "spi-flash";
                 spi-max-frequency = <16000000>;
 		spi-cpol;

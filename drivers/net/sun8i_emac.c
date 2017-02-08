@@ -453,6 +453,7 @@ static int _sun8i_emac_eth_init(struct emac_eth_dev *priv, u8 *enetaddr)
 
 static int parse_phy_pins(struct udevice *dev)
 {
+#if !(defined(CONFIG_MACH_SUN50I) && defined(CONFIG_SUNXI_PINCTRL))
 	int offset;
 	const char *pin_name;
 	int drive, pull, i;
@@ -491,6 +492,7 @@ static int parse_phy_pins(struct udevice *dev)
 		printf("WARNING: emac: cannot find allwinner,pins property\n");
 		return -2;
 	}
+#endif
 
 	return 0;
 }
@@ -828,7 +830,8 @@ static int sun8i_emac_eth_ofdata_to_platdata(struct udevice *dev)
 
 	if (ret == 0) {
 		ret = fdtdec_get_int_array(gd->fdt_blob, dev->of_offset,
-					   "allwinner,reset-delays-us", sun8i_pdata->reset_delays, 3);
+					   "allwinner,reset-delays-us",
+					   sun8i_pdata->reset_delays, 3);
 	} else if (ret == -ENOENT) {
 		ret = 0;
 	}

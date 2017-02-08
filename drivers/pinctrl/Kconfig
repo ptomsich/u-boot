@@ -175,6 +175,16 @@ config PIC32_PINCTRL
 	  by a device tree node which contains both GPIO defintion and pin control
 	  functions.
 
+config SUNXI_PINCTRL
+        bool "Allwinner Axx pin-control and pin-mux driver"
+	depends on DM && ARCH_SUNXI
+	default y
+	help
+	  Supports pin multiplexing control, drive-strength and bias control on
+	  Allwinner Axx SoCs. The driver is controlled by a device tree node which
+	  contains both the GPIO definitions and the pin control functions for
+	  each multiplex function.
+
 endif
 
 source "drivers/pinctrl/meson/Kconfig"
