@@ -16,6 +16,9 @@
 #undef CONFIG_DM_GPIO
 #undef CONFIG_DM_I2C
 #undef CONFIG_DM_SPI
+#undef CONFIG_DM_MMC
+/* CONFIG_BLK also depends on DM */
+#undef CONFIG_BLK
 #endif
 
 #undef CONFIG_DM_WARN
