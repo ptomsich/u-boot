@@ -410,7 +410,6 @@ static int gpiobank_sunxi_probe(struct udevice *dev)
 	fdt_addr_t offset;
 	fdt_size_t size;
 	fdt_addr_t base;
-	struct sunxi_gpio_reg *ctlr;
 
 	debug("%s: %s", __func__, dev->name);
 
