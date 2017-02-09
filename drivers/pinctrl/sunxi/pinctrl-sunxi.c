@@ -12,7 +12,6 @@
 #include <errno.h>
 #include <syscon.h>
 #include <asm/io.h>
-#include <asm/arch/periph.h>
 #include <asm/arch/clock.h>
 #include <asm/gpio.h>
 #include <dm/lists.h>
