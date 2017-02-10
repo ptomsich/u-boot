@@ -3,30 +3,65 @@
  * Allwinner Technology Co., Ltd. <www.allwinnertech.com>
  * Aaron <leafy.myeh@allwinnertech.com>
  *
+ * (C) 2017 Theobroma Systems Design und Consulting GmbH
+ *
  * MMC driver for allwinner sunxi platform.
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <errno.h>
-#include <malloc.h>
-#include <mmc.h>
-#include <asm/io.h>
+#include <asm-generic/gpio.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/mmc.h>
-#include <asm-generic/gpio.h>
+#include <asm/io.h>
+#include <clk.h>
+#include <dm/device.h>
+#include <dt-structs.h>
+#include <errno.h>
+#include <linux/iopoll.h>
+#include <malloc.h>
+#include <mmc.h>
+#include <reset.h>
+
+DECLARE_GLOBAL_DATA_PTR;
+
+struct sunxi_mmc_plat {
+	struct mmc mmc;
+};
 
 struct sunxi_mmc_host {
 	unsigned mmc_no;
+#if !defined(CONFIG_DM_MMC)
 	uint32_t *mclkreg;
+#endif
 	unsigned fatal_err;
 	struct sunxi_mmc *reg;
 	struct mmc_config cfg;
+	bool cd_inverted;
+#if defined(CONFIG_DM_MMC)
+	struct mmc *mmc;
+	struct gpio_desc cd_gpio;	/* card-detect (optional) */
+	struct gpio_desc pwr_gpio;	/* power-enabled (optional) */
+	struct gpio_desc wp_gpio;	/* write-protect (optional) */
+	bool wp_inverted;
+	struct reset_ctl reset;
+	struct clk ahb_clk_gate;
+	struct clk mmc_clk;
+#else
+	int cd_pin;
+#endif
 };
 
+#if defined(CONFIG_DM_MMC) && defined(CONFIG_DM_MMC_OPS)
+static const struct dm_mmc_ops sunxi_mmc_ops;
+#else
+static const struct mmc_ops sunxi_mmc_ops;
+#endif
+
+#if !defined(CONFIG_DM_MMC)
 /* support 4 mmc hosts */
 struct sunxi_mmc_host mmc_host[4];
 
@@ -36,7 +71,9 @@ static int sunxi_mmc_getcd_gpio(int sdc_no)
 	case 0: return sunxi_name_to_gpio(CONFIG_MMC0_CD_PIN);
 	case 1: return sunxi_name_to_gpio(CONFIG_MMC1_CD_PIN);
 	case 2: return sunxi_name_to_gpio(CONFIG_MMC2_CD_PIN);
+#if !defined(CONFIG_ARCH_SUN50I)  /* only 3 MMC controllers on the A64 */
 	case 3: return sunxi_name_to_gpio(CONFIG_MMC3_CD_PIN);
+#endif
 	}
 	return -EINVAL;
 }
@@ -62,10 +99,12 @@ static int mmc_resource_init(int sdc_no)
 		mmchost->reg = (struct sunxi_mmc *)SUNXI_MMC2_BASE;
 		mmchost->mclkreg = &ccm->sd2_clk_cfg;
 		break;
+#if !defined(CONFIG_ARCH_SUN50I)  /* only 3 MMC controllers on the A64 */
 	case 3:
 		mmchost->reg = (struct sunxi_mmc *)SUNXI_MMC3_BASE;
 		mmchost->mclkreg = &ccm->sd3_clk_cfg;
 		break;
+#endif
 	default:
 		printf("Wrong mmc number %d\n", sdc_no);
 		return -1;
@@ -80,10 +119,47 @@ static int mmc_resource_init(int sdc_no)
 			ret = gpio_direction_input(cd_pin);
 		}
 	}
+	mmchost->cd_pin = cd_pin;
 
 	return ret;
 }
+#endif
 
+#if defined(CONFIG_DM_MMC)
+static int mmc_resource_init_from_udev(struct udevice *dev)
+{
+	struct sunxi_mmc_host *mmchost = dev_get_priv(dev);
+	int ret = 0;
+
+	debug("%s: %s\n", dev->name, __func__);
+
+	switch ((uintptr_t)mmchost->reg) {
+	case SUNXI_MMC0_BASE:
+		mmchost->mmc_no = 0;
+		break;
+	case SUNXI_MMC1_BASE:
+		mmchost->mmc_no = 1;
+		break;
+	case SUNXI_MMC2_BASE:
+		mmchost->mmc_no = 2;
+		break;
+#if !defined(CONFIG_ARCH_SUN50I)  /* only 3 MMC controllers on the A64 */
+	case SUNXI_MMC3_BASE:
+		mmchost->mmc_no = 3;
+		break;
+#endif
+	default:
+		debug("%s: unknown base address %p\n", __func__, mmchost->reg);
+		return -1;
+	}
+
+	debug("%s: mmc_no %d\n", dev->name, mmchost->mmc_no);
+
+	return ret;
+}
+#endif
+
+#if !defined(CONFIG_DM_MMC)
 static int mmc_set_mod_clk(struct sunxi_mmc_host *mmchost, unsigned int hz)
 {
 	unsigned int pll, pll_hz, div, n, oclk_dly, sclk_dly;
@@ -154,10 +230,10 @@ static int mmc_set_mod_clk(struct sunxi_mmc_host *mmchost, unsigned int hz)
 	return 0;
 }
 
-static int mmc_clk_io_on(int sdc_no)
+static int mmc_clk_io_on(struct sunxi_mmc_host *mmchost)
 {
-	struct sunxi_mmc_host *mmchost = &mmc_host[sdc_no];
 	struct sunxi_ccm_reg *ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+	int sdc_no = mmchost->mmc_no;
 
 	debug("init mmc %d clock and io\n", sdc_no);
 
@@ -176,12 +252,38 @@ static int mmc_clk_io_on(int sdc_no)
 
 	return mmc_set_mod_clk(mmchost, 24000000);
 }
+#endif
+
+#if defined(CONFIG_DM_MMC)
+static int mmc_clk_io_on(struct sunxi_mmc_host *mmchost)
+{
+	/* Enable the AHB clock gate */
+	clk_enable(&mmchost->ahb_clk_gate);
+
+	/* Deassert the AHB module reset */
+	reset_deassert(&mmchost->reset);
+
+#if defined(CONFIG_MACH_SUN9I)
+	/* TODO --- covert this to DM */
+	/* sun9i has a mmc-common module, also set the gate and reset there */
+	writel(SUNXI_MMC_COMMON_CLK_GATE | SUNXI_MMC_COMMON_RESET,
+	       SUNXI_MMC_COMMON_BASE + 4 * sdc_no);
+#endif
+
+	clk_set_rate(&mmchost->mmc_clk, 24000000);
+	clk_enable(&mmchost->mmc_clk);
+
+	return 0;
+}
+#endif
 
 static int mmc_update_clk(struct mmc *mmc)
 {
 	struct sunxi_mmc_host *mmchost = mmc->priv;
 	unsigned int cmd;
 	unsigned timeout_msecs = 2000;
+
+	debug("%s: base %p\n", __func__, mmchost->reg);
 
 	cmd = SUNXI_MMC_CMD_START |
 	      SUNXI_MMC_CMD_UPCLK_ONLY |
@@ -210,9 +312,14 @@ static int mmc_config_clock(struct mmc *mmc)
 	if (mmc_update_clk(mmc))
 		return -1;
 
+#if !defined(CONFIG_DM_MMC)
 	/* Set mod_clk to new rate */
 	if (mmc_set_mod_clk(mmchost, mmc->clock))
 		return -1;
+#else
+	if (clk_set_rate(&mmchost->mmc_clk, mmc->clock) == 0)
+		return -1;
+#endif
 
 	/* Clear internal divider */
 	rval &= ~SUNXI_MMC_CLK_DIVIDER_MASK;
@@ -227,8 +334,14 @@ static int mmc_config_clock(struct mmc *mmc)
 	return 0;
 }
 
+#if defined(CONFIG_DM_MMC_OPS)
+static int sunxi_mmc_set_ios(struct udevice *dev)
+{
+	struct mmc *mmc = mmc_get_mmc_dev(dev);
+#else
 static int sunxi_mmc_set_ios(struct mmc *mmc)
 {
+#endif
 	struct sunxi_mmc_host *mmchost = mmc->priv;
 
 	debug("set ios: bus_width: %x, clock: %d\n",
@@ -254,12 +367,19 @@ static int sunxi_mmc_set_ios(struct mmc *mmc)
 static int sunxi_mmc_core_init(struct mmc *mmc)
 {
 	struct sunxi_mmc_host *mmchost = mmc->priv;
+	uint32_t regval;
+	int ret = 0;
+
+	debug("%s: base %p", __func__, mmchost->reg);
 
 	/* Reset controller */
 	writel(SUNXI_MMC_GCTRL_RESET, &mmchost->reg->gctrl);
-	udelay(1000);
 
-	return 0;
+	/* Wait for the reset bit (auto-clearing) to deassert */
+	ret = readl_poll_timeout(&mmchost->reg->gctrl, regval,
+				 !(regval & SUNXI_MMC_GCTRL_RESET), 1000000);
+
+	return ret;
 }
 
 static int mmc_trans_data_by_cpu(struct mmc *mmc, struct mmc_data *data)
@@ -314,9 +434,16 @@ static int mmc_rint_wait(struct mmc *mmc, unsigned int timeout_msecs,
 	return 0;
 }
 
+#if defined(CONFIG_DM_MMC_OPS)
+static int sunxi_mmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
+			      struct mmc_data *data)
+{
+	struct mmc *mmc = mmc_get_mmc_dev(dev);
+#else
 static int sunxi_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 			      struct mmc_data *data)
 {
+#endif
 	struct sunxi_mmc_host *mmchost = mmc->priv;
 	unsigned int cmdval = SUNXI_MMC_CMD_START;
 	unsigned int timeout_msecs;
@@ -355,7 +482,7 @@ static int sunxi_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		writel(data->blocks * data->blocksize, &mmchost->reg->bytecnt);
 	}
 
-	debug("mmc %d, cmd %d(0x%08x), arg 0x%08x\n", mmchost->mmc_no,
+	debug("mmc %p, cmd %d(0x%08x), arg 0x%08x\n", mmchost,
 	      cmd->cmdidx, cmdval | cmd->cmdidx, cmd->cmdarg);
 	writel(cmd->cmdarg, &mmchost->reg->arg);
 
@@ -435,30 +562,52 @@ out:
 	return error;
 }
 
-static int sunxi_mmc_getcd(struct mmc *mmc)
+static inline int cdpin_is_valid(struct sunxi_mmc_host *priv)
 {
-	struct sunxi_mmc_host *mmchost = mmc->priv;
-	int cd_pin;
-
-	cd_pin = sunxi_mmc_getcd_gpio(mmchost->mmc_no);
-	if (cd_pin < 0)
-		return 1;
-
-	return !gpio_get_value(cd_pin);
+#if !defined(CONFIG_DM_MMC)
+	return priv->cd_pin >= 0;
+#else
+	return dm_gpio_is_valid(&priv->cd_gpio);
+#endif
 }
 
-static const struct mmc_ops sunxi_mmc_ops = {
-	.send_cmd	= sunxi_mmc_send_cmd,
-	.set_ios	= sunxi_mmc_set_ios,
-	.init		= sunxi_mmc_core_init,
-	.getcd		= sunxi_mmc_getcd,
-};
+static inline int cdpin_get_value(struct sunxi_mmc_host *priv)
+{
+#if !defined(CONFIG_DM_MMC)
+	return gpio_get_value(priv->cd_pin);
+#else
+	return dm_gpio_get_value(&priv->cd_gpio);
+#endif
+}
 
+#if defined(CONFIG_DM_MMC_OPS)
+static int sunxi_mmc_getcd(struct udevice *dev)
+{
+	struct mmc *mmc = mmc_get_mmc_dev(dev);
+#else
+static int sunxi_mmc_getcd(struct mmc *mmc)
+{
+#endif
+	struct sunxi_mmc_host *priv = mmc->priv;
+	int value = 1;
+
+	if (cdpin_is_valid(priv)) {
+		value = cdpin_get_value(priv);
+
+		if (priv->cd_inverted)
+			return !value;
+	}
+
+	return value;
+}
+
+#if !defined(CONFIG_DM_MMC)
 struct mmc *sunxi_mmc_init(int sdc_no)
 {
 	struct mmc_config *cfg = &mmc_host[sdc_no].cfg;
 
 	memset(&mmc_host[sdc_no], 0, sizeof(struct sunxi_mmc_host));
+	mmc_host[sdc_no].cd_inverted = true;
 
 	cfg->name = "SUNXI SD/MMC";
 	cfg->ops  = &sunxi_mmc_ops;
@@ -478,7 +627,160 @@ struct mmc *sunxi_mmc_init(int sdc_no)
 	if (mmc_resource_init(sdc_no) != 0)
 		return NULL;
 
-	mmc_clk_io_on(sdc_no);
+	mmc_clk_io_on(&mmc_host[sdc_no]);
 
 	return mmc_create(cfg, &mmc_host[sdc_no]);
 }
+#endif
+
+#if defined(CONFIG_DM_MMC) && defined(CONFIG_DM_MMC_OPS)
+static const struct dm_mmc_ops sunxi_mmc_ops = {
+	.send_cmd	= sunxi_mmc_send_cmd,
+	.set_ios	= sunxi_mmc_set_ios,
+	.get_cd		= sunxi_mmc_getcd,
+};
+#else
+static const struct mmc_ops sunxi_mmc_ops = {
+	.send_cmd	= sunxi_mmc_send_cmd,
+	.set_ios	= sunxi_mmc_set_ios,
+	.init		= sunxi_mmc_core_init,
+	.getcd		= sunxi_mmc_getcd,
+};
+#endif
+
+#if defined(CONFIG_DM_MMC)
+static int sunxi_mmc_ofdata_to_platdata(struct udevice *dev)
+{
+	return 0;
+}
+
+static int sunxi_mmc_probe(struct udevice *dev)
+{
+	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
+#if defined(CONFIG_BLK)
+	struct sunxi_mmc_plat *plat = dev_get_platdata(dev);
+#endif
+	struct sunxi_mmc_host *priv = dev_get_priv(dev);
+	struct mmc_config *cfg = &priv->cfg;
+	int bus_width;
+	u32 f_minmax[2];
+
+	priv->reg = (void *)dev_get_addr(dev);
+	cfg->name = "SUNXI SD/MMC";
+#if !(defined(CONFIG_DM_MMC) && defined(CONFIG_DM_MMC_OPS))
+	cfg->ops  = &sunxi_mmc_ops;
+#endif
+	cfg->voltages = MMC_VDD_32_33 | MMC_VDD_33_34;
+	cfg->b_max = CONFIG_SYS_MMC_MAX_BLK_COUNT;
+	cfg->host_caps = MMC_MODE_HS_52MHz | MMC_MODE_HS;
+
+	bus_width = fdtdec_get_int(gd->fdt_blob, dev->of_offset,
+				   "bus-width", 4);
+	if (bus_width == 8)
+		cfg->host_caps |= MMC_MODE_8BIT;
+	else if (bus_width == 4)
+		cfg->host_caps |= MMC_MODE_4BIT;
+
+	debug("%s: reg %p bus_width %d\n", dev->name, priv->reg, bus_width);
+
+	if (!fdtdec_get_int_array(gd->fdt_blob, dev->of_offset,
+				  "clock-freq-min-max", f_minmax, 2)) {
+		cfg->f_min = f_minmax[0];
+		cfg->f_max = f_minmax[1];
+	} else {
+		/* use the defaults */
+		cfg->f_min = 400000;
+		cfg->f_max = 52000000;
+	}
+
+	/* Some legacy functionality in our tree still depends on the
+	 * mmchost->mmc_no... until we can get rid of this, initialise
+	 * it based on the base address of the device.
+	 */
+	if (mmc_resource_init_from_udev(dev) != 0)
+		return -EINVAL;
+
+	/* All GPIOs are optional */
+	gpio_request_by_name(dev, "cd-gpios", 0,
+			     &priv->cd_gpio, GPIOD_IS_IN);
+	priv->cd_inverted = fdtdec_get_bool(gd->fdt_blob, dev->of_offset,
+					    "cd-inverted");
+	gpio_request_by_name(dev, "wp-gpios", 0,
+			     &priv->wp_gpio, GPIOD_IS_IN);
+	priv->wp_inverted = fdtdec_get_bool(gd->fdt_blob, dev->of_offset,
+					    "wp-inverted");
+	gpio_request_by_name(dev, "power-gpios", 0,
+			     &priv->pwr_gpio, GPIOD_IS_OUT);
+	if (dm_gpio_is_valid(&priv->pwr_gpio))
+		dm_gpio_set_value(&priv->pwr_gpio, 1);
+
+	if (reset_get_by_name(dev, "ahb", &priv->reset)) {
+		error("%s: failed to get 'ahb' reset\n", dev->name);
+		return -EINVAL;
+	}
+
+	if (clk_get_by_name(dev, "ahb", &priv->ahb_clk_gate) ||
+	    clk_get_by_name(dev, "mmc", &priv->mmc_clk)) {
+		error("%s: failed to get all required clocks ('ahb', 'mmc')\n",
+		      dev->name);
+		return -EINVAL;
+	}
+
+	mmc_clk_io_on(priv);
+
+#if defined(CONFIG_BLK)
+	priv->mmc = &plat->mmc;
+#else
+	priv->mmc = mmc_create(cfg, priv);
+	if (priv->mmc == NULL)
+		return -1;
+#endif
+	priv->mmc->priv = priv;
+	priv->mmc->dev = dev;
+	priv->mmc->cfg = cfg;
+	priv->mmc->has_init = 0;
+	upriv->mmc = priv->mmc;
+
+#if defined(CONFIG_DM_MMC) && defined(CONFIG_DM_MMC_OPS)
+	sunxi_mmc_core_init(priv->mmc);
+#endif
+	return 0;
+}
+
+#if defined(CONFIG_BLK)
+static int sunxi_mmc_bind(struct udevice *dev)
+{
+	struct sunxi_mmc_plat *plat = dev_get_platdata(dev);
+	struct sunxi_mmc_host *priv = dev_get_priv(dev);
+
+	debug("%s: %s\n", dev->name, __func__);
+
+	/* TODO: To move cfg into plat, we need to change the legacy
+	   code, which references through the arrays... */
+
+	return mmc_bind(dev, &plat->mmc, &priv->cfg);
+}
+#endif
+
+static const struct udevice_id sunxi_mmc_ids[] = {
+	{ .compatible = "allwinner,sun50i-a64-mmc" },
+	{ }
+};
+
+U_BOOT_DRIVER(sunxi_mmc_drv) = {
+	.name		= "sunxi_mmc",
+	.id		= UCLASS_MMC,
+	.of_match	= sunxi_mmc_ids,
+	.ofdata_to_platdata = sunxi_mmc_ofdata_to_platdata,
+	.probe		= sunxi_mmc_probe,
+	.priv_auto_alloc_size = sizeof(struct sunxi_mmc_host),
+	.platdata_auto_alloc_size = sizeof(struct sunxi_mmc_plat),
+#if defined(CONFIG_DM_MMC_OPS)
+	.ops		= &sunxi_mmc_ops,
+#endif
+#if defined(CONFIG_BLK)
+	.bind           = sunxi_mmc_bind,
+#endif
+};
+
+#endif

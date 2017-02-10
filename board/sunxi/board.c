@@ -192,7 +192,7 @@ void board_nand_init(void)
 }
 #endif
 
-#ifdef CONFIG_GENERIC_MMC
+#if defined(CONFIG_GENERIC_MMC) && !(defined(CONFIG_DM_MMC) && defined(CONFIG_PINCTRL))
 static void mmc_pinmux_setup(int sdc)
 {
 	unsigned int pin;
@@ -370,6 +370,7 @@ static void mmc_pinmux_setup(int sdc)
 
 int board_mmc_init(bd_t *bis)
 {
+#if !(defined(CONFIG_DM_MMC) && defined(CONFIG_PINCTRL))
 	__maybe_unused struct mmc *mmc0, *mmc1;
 	__maybe_unused char buf[512];
 
@@ -398,7 +399,7 @@ int board_mmc_init(bd_t *bis)
 		mmc1->block_dev.devnum = 0;
 	}
 #endif
-
+#endif
 	return 0;
 }
 #endif
