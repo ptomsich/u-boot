@@ -28,6 +28,7 @@
 #include <asm/gpio.h>
 #include <asm/io.h>
 #include <crc.h>
+#include <dm/root.h>
 #include <environment.h>
 #include <libfdt.h>
 #include <nand.h>
@@ -81,8 +82,19 @@ DECLARE_GLOBAL_DATA_PTR;
 int board_init(void)
 {
 	__maybe_unused int id_pfr1, ret;
+	int __maybe_unused offset;
 
 	gd->bd->bi_boot_params = (PHYS_SDRAM_0 + 0x100);
+
+#if defined(CONFIG_CLK)
+	/* Sunxi device trees have their clock definitions in a tree
+	 * below /clocks, which is a node without a compatible-string.
+	 * We need to manually locate it and scan its subnodes.
+	 */
+	offset = fdt_path_offset(gd->fdt_blob, "/clocks");
+	if (offset > 0)
+		dm_scan_fdt_node(gd->dm_root, gd->fdt_blob, offset, false);
+#endif
 
 #ifndef CONFIG_ARM64
 	asm volatile("mrc p15, 0, %0, c0, c1, 1" : "=r"(id_pfr1));
