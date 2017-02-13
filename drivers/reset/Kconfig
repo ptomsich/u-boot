@@ -43,4 +43,13 @@ config RESET_UNIPHIER
 	  Say Y if you want to control reset signals provided by System Control
 	  block, Media I/O block, Peripheral Block.
 
+config RESET_SUNXI
+        bool "Reset controller driver for Allwiner SoCs"
+	depends on DM_RESET && ARCH_SUNXI
+	default y
+	help
+	  Support for reset controllers on Allwinner SoCs.
+	  Say Y if you want to control reset signals provided by CCU (e.g. sun50i)
+	  or PRCM (e.g. sun6i, sun9i) blocks.
+
 endmenu
