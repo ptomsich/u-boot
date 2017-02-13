@@ -7,6 +7,7 @@
 
 obj-$(CONFIG_CLK) += clk-uclass.o clk_fixed_rate.o
 obj-$(CONFIG_ARCH_ROCKCHIP) += rockchip/
+obj-$(CONFIG_ARCH_SUNXI) += sunxi/
 obj-$(CONFIG_SANDBOX) += clk_sandbox.o
 obj-$(CONFIG_SANDBOX) += clk_sandbox_test.o
 obj-$(CONFIG_MACH_PIC32) += clk_pic32.o
