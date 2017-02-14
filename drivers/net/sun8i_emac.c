@@ -143,13 +143,8 @@ static int sun8i_mdio_read(struct mii_dev *bus, int addr, int devad, int reg)
 	u32 miiaddr = 0;
 	int timeout = CONFIG_MDIO_TIMEOUT;
 
-	miiaddr &= ~MDIO_CMD_MII_WRITE;
-	miiaddr &= ~MDIO_CMD_MII_PHY_REG_ADDR_MASK;
 	miiaddr |= (reg << MDIO_CMD_MII_PHY_REG_ADDR_SHIFT) &
 		MDIO_CMD_MII_PHY_REG_ADDR_MASK;
-
-	miiaddr &= ~MDIO_CMD_MII_PHY_ADDR_MASK;
-
 	miiaddr |= (addr << MDIO_CMD_MII_PHY_ADDR_SHIFT) &
 		MDIO_CMD_MII_PHY_ADDR_MASK;
 
@@ -179,11 +174,8 @@ static int sun8i_mdio_write(struct mii_dev *bus, int addr, int devad, int reg,
 	u32 miiaddr = 0;
 	int ret = -1, timeout = CONFIG_MDIO_TIMEOUT;
 
-	miiaddr &= ~MDIO_CMD_MII_PHY_REG_ADDR_MASK;
 	miiaddr |= (reg << MDIO_CMD_MII_PHY_REG_ADDR_SHIFT) &
 		MDIO_CMD_MII_PHY_REG_ADDR_MASK;
-
-	miiaddr &= ~MDIO_CMD_MII_PHY_ADDR_MASK;
 	miiaddr |= (addr << MDIO_CMD_MII_PHY_ADDR_SHIFT) &
 		MDIO_CMD_MII_PHY_ADDR_MASK;
 
