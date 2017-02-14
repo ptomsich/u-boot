@@ -30,6 +30,12 @@
 #define MDIO_CMD_MII_PHY_ADDR_MASK	0x0001f000
 #define MDIO_CMD_MII_PHY_ADDR_SHIFT	12
 
+#define MDIO_CMD_MDC_DIV_RATIO_M_SHIFT  20
+#define MDIO_CMD_MDC_DIV_16             (0 << MDIO_CMD_MDC_DIV_RATIO_M_SHIFT)
+#define MDIO_CMD_MDC_DIV_32             (1 << MDIO_CMD_MDC_DIV_RATIO_M_SHIFT)
+#define MDIO_CMD_MDC_DIV_64             (2 << MDIO_CMD_MDC_DIV_RATIO_M_SHIFT)
+#define MDIO_CMD_MDC_DIV_128            (3 << MDIO_CMD_MDC_DIV_RATIO_M_SHIFT)
+
 #define CONFIG_TX_DESCR_NUM	32
 #define CONFIG_RX_DESCR_NUM	32
 #define CONFIG_ETH_BUFSIZE	2048 /* Note must be dma aligned */
@@ -147,6 +153,10 @@ static int sun8i_mdio_read(struct mii_dev *bus, int addr, int devad, int reg)
 	miiaddr |= (addr << MDIO_CMD_MII_PHY_ADDR_SHIFT) &
 		MDIO_CMD_MII_PHY_ADDR_MASK;
 
+	/* The MAC block is fed by a 300MHz clock, so we need to divide by 128
+	   to bring the MDC into the range permissible by the IEEE standard. */
+	miiaddr |= MDIO_CMD_MDC_DIV_128;
+
 	miiaddr |= MDIO_CMD_MII_BUSY;
 
 	writel(miiaddr, priv->mac_reg + EMAC_MII_CMD);
@@ -179,6 +189,10 @@ static int sun8i_mdio_write(struct mii_dev *bus, int addr, int devad, int reg,
 
 	miiaddr |= MDIO_CMD_MII_WRITE;
 	miiaddr |= MDIO_CMD_MII_BUSY;
+
+	/* The MAC block is fed by a 300MHz clock, so we need to divide by 128
+	   to bring the MDC into the range permissible by the IEEE standard. */
+	miiaddr |= MDIO_CMD_MDC_DIV_128;
 
 	writel(val, priv->mac_reg + EMAC_MII_DATA);
 	writel(miiaddr, priv->mac_reg + EMAC_MII_CMD);
