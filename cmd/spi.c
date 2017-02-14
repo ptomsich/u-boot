@@ -30,6 +30,8 @@
 #   define CONFIG_DEFAULT_SPI_MODE	SPI_MODE_0
 #endif
 
+#define SSPI_DEFAULT_HZ  1000000
+
 /*
  * Values from last command.
  */
@@ -40,7 +42,7 @@ static int   		bitlen;
 static uchar 		dout[MAX_SPI_BYTES];
 static uchar 		din[MAX_SPI_BYTES];
 
-static int do_spi_xfer(int bus, int cs)
+static int do_spi_xfer(int bus, int cs, unsigned int hz)
 {
 	struct spi_slave *slave;
 	int ret = 0;
@@ -53,12 +55,12 @@ static int do_spi_xfer(int bus, int cs)
 	str = strdup(name);
 	if (!str)
 		return -ENOMEM;
-	ret = spi_get_bus_and_cs(bus, cs, 1000000, mode, "spi_generic_drv",
+	ret = spi_get_bus_and_cs(bus, cs, hz, mode, "spi_generic_drv",
 				 str, &dev, &slave);
 	if (ret)
 		return ret;
 #else
-	slave = spi_setup_slave(bus, cs, 1000000, mode);
+	slave = spi_setup_slave(bus, cs, hz, mode);
 	if (!slave) {
 		printf("Invalid device %d:%d\n", bus, cs);
 		return -EINVAL;
@@ -109,6 +111,7 @@ int do_spi (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	char  *cp = 0;
 	uchar tmp;
 	int   j;
+	unsigned int hz = SSPI_DEFAULT_HZ;
 
 	/*
 	 * We use the last specified parameters, unless new ones are
@@ -149,6 +152,8 @@ int do_spi (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 					dout[j / 2] |= tmp;
 			}
 		}
+		if (argc >= 5)
+			hz = simple_strtoul(argv[4], NULL, 10);
 	}
 
 	if ((bitlen < 0) || (bitlen >  (MAX_SPI_BYTES * 8))) {
@@ -156,7 +161,7 @@ int do_spi (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return 1;
 	}
 
-	if (do_spi_xfer(bus, cs))
+	if (do_spi_xfer(bus, cs, hz))
 		return 1;
 
 	return 0;
@@ -165,12 +170,13 @@ int do_spi (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 /***************************************************/
 
 U_BOOT_CMD(
-	sspi,	5,	1,	do_spi,
+	sspi,	6,	1,	do_spi,
 	"SPI utility command",
-	"[<bus>:]<cs>[.<mode>] <bit_len> <dout> - Send and receive bits\n"
+	"[<bus>:]<cs>[.<mode>] <bit_len> <dout> [<hz>] - Send and receive bits\n"
 	"<bus>     - Identifies the SPI bus\n"
 	"<cs>      - Identifies the chip select\n"
 	"<mode>    - Identifies the SPI mode to use\n"
 	"<bit_len> - Number of bits to send (base 10)\n"
-	"<dout>    - Hexadecimal string that gets sent"
+	"<dout>    - Hexadecimal string that gets sent\n"
+	"[<clk>]   - Bus clock in Hz (defaults to 1 MHz)"
 );
