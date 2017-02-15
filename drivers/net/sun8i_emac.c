@@ -14,6 +14,12 @@
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/gpio.h>
+#if defined(CONFIG_DM_GPIO)
+#include <asm-generic/gpio.h>
+#endif
+#if defined(CONFIG_CLK)
+#include <clk.h>
+#endif
 #include <common.h>
 #include <dm.h>
 #include <fdt_support.h>
@@ -21,8 +27,8 @@
 #include <malloc.h>
 #include <miiphy.h>
 #include <net.h>
-#ifdef CONFIG_DM_GPIO
-#include <asm-generic/gpio.h>
+#if defined(CONFIG_DM_RESET)
+#include <reset.h>
 #endif
 
 #define MDIO_CMD_MII_BUSY		BIT(0)
@@ -139,6 +145,12 @@ struct emac_eth_dev {
 	struct mii_dev *bus;
 #ifdef CONFIG_DM_GPIO
 	struct gpio_desc reset_gpio;
+#endif
+#ifdef CONFIG_DM_RESET
+	struct reset_ctl reset;
+#endif
+#ifdef CONFIG_CLK
+	struct clk ahb_clk_gate;
 #endif
 };
 
@@ -459,6 +471,7 @@ static int _sun8i_emac_eth_init(struct emac_eth_dev *priv, u8 *enetaddr)
 
 static int parse_phy_pins(struct udevice *dev)
 {
+#if !(defined(CONFIG_MACH_SUN50I) && defined(CONFIG_SUNXI_PINCTRL))
 	int offset;
 	const char *pin_name;
 	int drive, pull, i;
@@ -497,6 +510,7 @@ static int parse_phy_pins(struct udevice *dev)
 		printf("WARNING: emac: cannot find allwinner,pins property\n");
 		return -2;
 	}
+#endif
 
 	return 0;
 }
@@ -619,10 +633,18 @@ static void sun8i_emac_board_setup(struct emac_eth_dev *priv)
 	}
 
 	/* Set clock gating for emac */
+#if defined(CONFIG_CLK)
+	clk_enable(&priv->ahb_clk_gate);
+#else
 	setbits_le32(&ccm->ahb_gate0, BIT(AHB_GATE_OFFSET_GMAC));
+#endif
 
 	/* De-assert EMAC */
+#if defined(CONFIG_DM_RESET)
+	reset_deassert(&priv->reset);
+#else
 	setbits_le32(&ccm->ahb_reset0_cfg, BIT(AHB_RESET_OFFSET_GMAC));
+#endif
 }
 
 #if defined(CONFIG_DM_GPIO)
@@ -825,7 +847,7 @@ static int sun8i_emac_eth_ofdata_to_platdata(struct udevice *dev)
 	if (!priv->use_internal_phy)
 		parse_phy_pins(dev);
 
-#ifdef CONFIG_DM_GPIO
+#if defined(CONFIG_DM_GPIO)
 	if (fdtdec_get_bool(gd->fdt_blob, dev->of_offset,
 			    "allwinner,reset-active-low"))
 		reset_flags |= GPIOD_ACTIVE_LOW;
@@ -835,9 +857,24 @@ static int sun8i_emac_eth_ofdata_to_platdata(struct udevice *dev)
 
 	if (ret == 0) {
 		ret = fdtdec_get_int_array(gd->fdt_blob, dev->of_offset,
-					   "allwinner,reset-delays-us", sun8i_pdata->reset_delays, 3);
+					   "allwinner,reset-delays-us",
+					   sun8i_pdata->reset_delays, 3);
 	} else if (ret == -ENOENT) {
 		ret = 0;
+	}
+#endif
+
+#if defined(CONFIG_DM_RESET)
+	if (reset_get_by_name(dev, "ahb", &priv->reset)) {
+		error("%s: failed to get 'ahb' reset\n", dev->name);
+		return -EINVAL;
+	}
+#endif
+
+#if defined(CONFIG_CLK)
+	if (clk_get_by_name(dev, "ahb", &priv->ahb_clk_gate)) {
+		error("%s: failed to get 'ahb' clock\n", dev->name);
+		return -EINVAL;
 	}
 #endif
 
