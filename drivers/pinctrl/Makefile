@@ -16,3 +16,5 @@ obj-$(CONFIG_PIC32_PINCTRL)	+= pinctrl_pic32.o
 obj-$(CONFIG_PINCTRL_EXYNOS)	+= exynos/
 obj-$(CONFIG_PINCTRL_MESON)	+= meson/
 obj-$(CONFIG_PINCTRL_MVEBU)	+= mvebu/
+
+obj-$(CONFIG_ARCH_SUNXI)        += sunxi/

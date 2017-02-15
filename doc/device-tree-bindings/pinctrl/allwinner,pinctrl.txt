@@ -1,0 +1,130 @@
+* Allwinner Pinmux Controller
+
+Allwinner integrates multiple banks (of 32 pins each) of pin-muxing,
+GPIO functionality and (optional) external interrupt functionality
+into a single controller.
+
+For each configurable pad (certain driver-cells, such as the IO from
+integrated USB PHYs or DRAM, have a fixed function and can not be
+configured), the muxing options (input, output or one of the several
+functions) can be selected.
+
+The Allwinner pinctrl node contains a description of the pinctrl block
+(i.e. including GPIO and external interrupt capability, if available)
+and subnodes describing individual GPIO banks and pin-configuration.
+
+Properties for the pinctrl node:
+ - compatible: should be "allwinner,sun50i-pinctrl"
+ - reg: address and length of the register set for the device.
+ - interrupts: interrupt for the device
+ - clocks: A phandle to the reference clock for this device
+
+Properties for the pinconfig sub-nodes:
+ - allwinner,pins: a list of pins (e.g. "PH2", "PH3") to configure
+ - allwinner,function: the name of pinmux function (e.g. "mmc2")
+ - drive-strength: a drive-stength setting of 10, 20, 30 or 40 mA
+ - bias-pull-up
+ - bias-pull-down
+ - bias-disable (default)
+
+Deprecated properties for the pinconfig sub-nodes:
+ - allwinner,drive: one of <SUN4I_PINCTRL_10_MA>, <SUN4I_PINCTRL_20_MA>,
+                    <SUN4I_PINCTRL_30_MA> or <SUN4I_PINCTRL_40_MA>
+ - allwinner,pull: one of <SUN4I_PINCTRL_NO_PULL>, <SUN4I_PINCTRL_PULL_UP>
+    		   or <SUN4I_PINCTRL_PULL_DOWN>
+
+Properties for the gpio sub-nodes:
+ - compatible: should be "allwinner,sunxi-gpiobank"
+ - allwinner,gpiobank-name: the name of the bank (e.g. <'A'>, <'B'>, ...)
+ - reg: offsets (within the address range of the enclosing pinctrl
+        node's address space) and length of the registers, where
+	* The first entry points to the mux/gpio registers.
+	* An (optional) second entry points to the extint registers.
+	  Note, that the second entry should be provided, if the
+	  interrupt property is present.
+ - interrupt: the interrupt used for external interrupt signalling
+              (should be one of the interrupts specified in the
+	      enclosing pinctrl node)
+
+Example:
+
+	pio: pinctrl@1c20800 {
+		compatible = "allwinner,sun50i-a64-pinctrl";
+		reg = <0x01c20800 0x400>;
+
+		interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&bus_gates 69>;
+
+		gpio-controller;
+		#gpio-cells = <3>;
+
+		interrupt-controller;
+		#interrupt-cells = <2>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* The A64 does not have bank A and leaves a hole in the
+		   address space where it normally would be */
+
+		gpiob: gpiob@24 {
+			compatible = "allwinner,sunxi-gpiobank";
+			allwinner,gpiobank-name = <'B'>;
+			reg = < 0x24 0x24 >, < 0x200 0x1c >;
+			interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		gpioc: gpioc@48 {
+			compatible = "allwinner,sunxi-gpiobank";
+			reg = < 0x48 0x24 >;
+			allwinner,gpiobank-name = <'C'>;
+		};
+
+		gpiod: gpiod@6c {
+			compatible = "allwinner,sunxi-gpiobank";
+			reg = < 0x6c 0x24 >;
+			allwinner,gpiobank-name = <'D'>;
+		};
+
+		gpioe: gpioe@90 {
+			compatible = "allwinner,sunxi-gpiobank";
+			reg = < 0x90 0x24 >;
+			allwinner,gpiobank-name = <'E'>;
+		};
+
+		gpiof: gpiof@b4 {
+			compatible = "allwinner,sunxi-gpiobank";
+			reg = < 0xb4 0x24 >;
+			allwinner,gpiobank-name = <'F'>;
+		};
+
+		gpiog: gpiog@d8 {
+			compatible = "allwinner,sunxi-gpiobank";
+			reg = < 0xd8 0x24 >, < 0x220 0x1c >;
+			allwinner,gpiobank-name = <'G'>;
+			interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		gpioh: gpioh@fc {
+			compatible = "allwinner,sunxi-gpiobank";
+			reg = < 0xfc 0x24 >, < 0x220 0x1c >;
+			allwinner,gpiobank-name = <'H'>;
+			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		uart0_pins_a: uart0_pins_a {
+			allwinner,pins = "PB8", "PB9";
+			allwinner,function = "uart0";
+			allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+			allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+		};
+
+		uart0_pins_b: uart0_pins_b {
+			allwinner,pins = "PF2", "PF3";
+			allwinner,function = "uart0";
+			allwinner,drive = <SUN4I_PINCTRL_10_MA>;
+			allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+		};
+	};
