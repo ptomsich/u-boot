@@ -369,16 +369,70 @@
 		pio: pinctrl@1c20800 {
 			compatible = "allwinner,sun50i-a64-pinctrl";
 			reg = <0x01c20800 0x400>;
+
 			interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&bus_gates 69>;
+
 			gpio-controller;
 			#gpio-cells = <3>;
+
 			interrupt-controller;
 			#interrupt-cells = <2>;
 
-			uart0_pins_a: uart0@0 {
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			/* The A64 does not have bank A and leaves a hole in the
+			   address space where it normally would be */
+
+			gpiob: gpiob@24 {
+				compatible = "allwinner,sunxi-gpiobank";
+				allwinner,gpiobank-name = <'B'>;
+				reg = < 0x24 0x24 >, < 0x200 0x1c >;
+				interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			gpioc: gpioc@48 {
+				compatible = "allwinner,sunxi-gpiobank";
+				reg = < 0x48 0x24 >;
+				allwinner,gpiobank-name = <'C'>;
+			};
+
+			gpiod: gpiod@6c {
+				compatible = "allwinner,sunxi-gpiobank";
+				reg = < 0x6c 0x24 >;
+				allwinner,gpiobank-name = <'D'>;
+			};
+
+			gpioe: gpioe@90 {
+				compatible = "allwinner,sunxi-gpiobank";
+				reg = < 0x90 0x24 >;
+				allwinner,gpiobank-name = <'E'>;
+			};
+
+			gpiof: gpiof@b4 {
+				compatible = "allwinner,sunxi-gpiobank";
+				reg = < 0xb4 0x24 >;
+				allwinner,gpiobank-name = <'F'>;
+			};
+
+			gpiog: gpiog@d8 {
+				compatible = "allwinner,sunxi-gpiobank";
+				reg = < 0xd8 0x24 >, < 0x220 0x1c >;
+				allwinner,gpiobank-name = <'G'>;
+				interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			gpioh: gpioh@fc {
+				compatible = "allwinner,sunxi-gpiobank";
+				reg = < 0xfc 0x24 >, < 0x220 0x1c >;
+				allwinner,gpiobank-name = <'H'>;
+				interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+			};
+
+			uart0_pins_a: uart0_pins_a {
 				allwinner,pins = "PB8", "PB9";
 				allwinner,function = "uart0";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
@@ -531,11 +585,22 @@
 			compatible = "allwinner,sun50i-a64-r-pinctrl";
 			reg = <0x01f02c00 0x400>;
 			interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
+
 			gpio-controller;
-			interrupt-controller;
-			#interrupt-cells = <3>;
-			#size-cells = <0>;
 			#gpio-cells = <3>;
+
+			interrupt-controller;
+			#interrupt-cells = <2>;
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			gpiol: gpiol@0 {
+				compatible = "allwinner,sunxi-gpiobank";
+				allwinner,gpiobank-name = <'L'>;
+				reg = < 0x0 0x24 >, < 0x200 0x1c >;
+				interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
+			};
 		};
 
 		ahb_rst: reset@1c202c0 {
