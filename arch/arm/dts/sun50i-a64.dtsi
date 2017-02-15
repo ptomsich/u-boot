@@ -310,6 +310,22 @@
 			clocks = <&osc24M>, <&pll6 1>, <&pll7 1>;
 			clock-output-names = "mmc2";
 		};
+
+		spi0_clk: spi0_clk@01c200a0 {
+			#clock-cells = <0>;
+			compatible = "allwinner,sun4i-a10-mod0-clk";
+			reg = <0x01c200a0 0x4>;
+			clocks = <&osc24M>, <&pll6 0>, <&pll7 0>;
+			clock-output-names = "spi0";
+		};
+
+		spi1_clk: spi1_clk@01c200a4 {
+			#clock-cells = <0>;
+			compatible = "allwinner,sun4i-a10-mod0-clk";
+			reg = <0x01c200a4 0x4>;
+			clocks = <&osc24M>, <&pll6 0>, <&pll7 0>;
+			clock-output-names = "spi1";
+		};
 	};
 
 	soc {
@@ -589,6 +605,16 @@
 				allwinner,drive = <SUN4I_PINCTRL_40_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
+
+			spi0_pins: spi0_pins {
+				allwinner,pins = "PC0", "PC1", "PC2", "PC3";
+				allwinner,function = "spi0";
+			};
+
+			spi1_pins: spi1_pins {
+				allwinner,pins = "PD0", "PD1", "PD2", "PD3";
+				allwinner,function = "spi1";
+			};
 		};
 
 		r_pio: pinctrl@01f02c00 {
@@ -767,6 +793,26 @@
 			phys = <&usbphy 1>;
 			phy-names = "usb";
 			status = "enabled";
+		};
+
+		spi0: spi@01c68000 {
+			compatible = "allwinner,sun8i-h3-spi";
+			reg = <0x01c68000 0x1000>;
+			clocks = <&bus_gates 20>, <&spi0_clk>;
+			clock-names = "ahb", "spi";
+			resets = <&ahb_rst 20>;
+			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		spi1: spi@01c69000 {
+			compatible = "allwinner,sun8i-h3-spi";
+			reg = <0x01c69000 0x1000>;
+			clocks = <&bus_gates 21>, <&spi1_clk>;
+			clock-names = "ahb", "spi";
+			resets = <&ahb_rst 21>;
+			interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
 		};
 	};
 };
