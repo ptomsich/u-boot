@@ -487,10 +487,19 @@ void i2c_init_board(void)
 #endif
 #endif
 
-#ifdef CONFIG_R_I2C_ENABLE
+#if defined(CONFIG_R_I2C_ENABLE)
+#if defined(CONFIG_MACH_SUN50I)
+	clock_twi_onoff(5, 1);
+	sunxi_gpio_set_cfgpin(SUNXI_GPL(8), SUN50I_GPL_R_TWI);
+	sunxi_gpio_set_cfgpin(SUNXI_GPL(9), SUN50I_GPL_R_TWI);
+	/* The A64-uQ7 doesn't have external pull-ups for R_I2C. */
+	sunxi_gpio_set_pull(SUNXI_GPL(8), SUNXI_GPIO_PULL_UP);
+	sunxi_gpio_set_pull(SUNXI_GPL(9), SUNXI_GPIO_PULL_UP);
+#else
 	clock_twi_onoff(5, 1);
 	sunxi_gpio_set_cfgpin(SUNXI_GPL(0), SUN8I_H3_GPL_R_TWI);
 	sunxi_gpio_set_cfgpin(SUNXI_GPL(1), SUN8I_H3_GPL_R_TWI);
+#endif
 #endif
 }
 

@@ -19,6 +19,7 @@ endif
 obj-$(CONFIG_MACH_SUN6I)	+= prcm.o
 obj-$(CONFIG_MACH_SUN8I)	+= prcm.o
 obj-$(CONFIG_MACH_SUN9I)	+= prcm.o
+obj-$(CONFIG_MACH_SUN50I)	+= prcm.o
 obj-$(CONFIG_MACH_SUN6I)	+= p2wi.o
 obj-$(CONFIG_MACH_SUN8I)	+= rsb.o
 obj-$(CONFIG_MACH_SUN9I)	+= rsb.o
