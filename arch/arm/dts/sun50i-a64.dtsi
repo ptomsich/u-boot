@@ -513,8 +513,8 @@
 				allwinner,pins = "PF0", "PF1", "PF2", "PF3",
 						 "PF4", "PF5";
 				allwinner,function = "mmc0";
-				allwinner,drive = <SUN4I_PINCTRL_30_MA>;
-				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+				drive-strength = < 30 >;
+				bias-pull-up;
 			};
 
 			mmc0_default_cd_pin: mmc0_cd_pin {
@@ -528,16 +528,26 @@
 				allwinner,pins = "PG0", "PG1", "PG2", "PG3",
 						 "PG4", "PG5";
 				allwinner,function = "mmc1";
-				allwinner,drive = <SUN4I_PINCTRL_30_MA>;
-				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+				drive-strength = < 30 >;
+				bias-pull-up;
 			};
 
 			mmc2_pins: mmc2_pins {
 				allwinner,pins = "PC1", "PC5", "PC6", "PC8",
 						 "PC9", "PC10";
 				allwinner,function = "mmc2";
-				allwinner,drive = <SUN4I_PINCTRL_30_MA>;
-				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
+				drive-strength = < 30 >;
+				bias-pull-up;
+			};
+
+			mmc2_8bit_pins: mmc2_8bit {
+				allwinner,pins = "PC5", "PC6", "PC8",
+						 "PC9", "PC10", "PC11",
+						 "PC12", "PC13", "PC14",
+						 "PC15", "PC16";
+				allwinner,function = "mmc2";
+				drive-strength = < 30 >;
+				bias-pull-up;
 			};
 
 			i2c0_pins: i2c0_pins {
