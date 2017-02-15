@@ -88,7 +88,7 @@
 		method = "smc";
 	};
 
-	memory {
+	memory: memory@40000000 {
 		device_type = "memory";
 		reg = <0x40000000 0>;
 	};
@@ -439,77 +439,77 @@
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart0_pins_b: uart0@1 {
+			uart0_pins_b: uart0_pins_b {
 				allwinner,pins = "PF2", "PF3";
 				allwinner,function = "uart0";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart1_2pins: uart1_2@0 {
+			uart1_2pins: uart1_2pins {
 				allwinner,pins = "PG6", "PG7";
 				allwinner,function = "uart1";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart1_4pins: uart1_4@0 {
+			uart1_4pins: uart1_4pins {
 				allwinner,pins = "PG6", "PG7", "PG8", "PG9";
 				allwinner,function = "uart1";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart2_2pins: uart2_2@0 {
+			uart2_2pins: uart2_2pins {
 				allwinner,pins = "PB0", "PB1";
 				allwinner,function = "uart2";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart2_4pins: uart2_4@0 {
+			uart2_4pins: uart2_4pins {
 				allwinner,pins = "PB0", "PB1", "PB2", "PB3";
 				allwinner,function = "uart2";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart3_pins_a: uart3@0 {
+			uart3_pins_a: uart3_pins_a {
 				allwinner,pins = "PD0", "PD1";
 				allwinner,function = "uart3";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart3_2pins_b: uart3_2@1 {
+			uart3_2pins_b: uart3_2pins_b {
 				allwinner,pins = "PH4", "PH5";
 				allwinner,function = "uart3";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart3_4pins_b: uart3_4@1 {
+			uart3_4pins_b: uart3_4pins_b {
 				allwinner,pins = "PH4", "PH5", "PH6", "PH7";
 				allwinner,function = "uart3";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart4_2pins: uart4_2@0 {
+			uart4_2pins: uart4_2pins {
 				allwinner,pins = "PD2", "PD3";
 				allwinner,function = "uart4";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			uart4_4pins: uart4_4@0 {
+			uart4_4pins: uart4_4pins {
 				allwinner,pins = "PD2", "PD3", "PD4", "PD5";
 				allwinner,function = "uart4";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			mmc0_pins: mmc0@0 {
+			mmc0_pins: mmc0_pins {
 				allwinner,pins = "PF0", "PF1", "PF2", "PF3",
 						 "PF4", "PF5";
 				allwinner,function = "mmc0";
@@ -517,14 +517,14 @@
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			mmc0_default_cd_pin: mmc0_cd_pin@0 {
+			mmc0_default_cd_pin: mmc0_cd_pin {
 				allwinner,pins = "PF6";
 				allwinner,function = "gpio_in";
 				allwinner,drive = <SUN4I_PINCTRL_10_MA>;
 				allwinner,pull = <SUN4I_PINCTRL_PULL_UP>;
 			};
 
-			mmc1_pins: mmc1@0 {
+			mmc1_pins: mmc1_pins {
 				allwinner,pins = "PG0", "PG1", "PG2", "PG3",
 						 "PG4", "PG5";
 				allwinner,function = "mmc1";
@@ -532,7 +532,7 @@
 				allwinner,pull = <SUN4I_PINCTRL_NO_PULL>;
 			};
 
-			mmc2_pins: mmc2@0 {
+			mmc2_pins: mmc2_pins {
 				allwinner,pins = "PC1", "PC5", "PC6", "PC8",
 						 "PC9", "PC10";
 				allwinner,function = "mmc2";
