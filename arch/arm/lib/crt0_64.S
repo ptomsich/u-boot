@@ -109,7 +109,13 @@ relocation_return:
  */
 	bl	c_runtime_cpu_setup		/* still call old routine */
 #endif /* !CONFIG_SPL_BUILD */
-
+#if defined(CONFIG_SPL_BUILD)
+	bl	spl_relocate_stack_gd
+	mov	x1, sp
+	adds	x0, x0, xzr
+	csel	x0, x0, x1, ne
+	mov	sp, x0
+#endif
 /* TODO: For SPL, call spl_relocate_stack_gd() to alloc stack relocation */
 
 /*
