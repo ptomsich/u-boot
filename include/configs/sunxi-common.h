@@ -144,6 +144,8 @@
 #define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		0	/* first detected MMC controller */
 #define CONFIG_SYS_MMC_MAX_DEVICE	4
+
+#define CONFIG_CMD_GPT
 #endif
 
 /* 64MB of malloc() pool */
@@ -335,6 +337,8 @@ extern int soft_i2c_gpio_scl;
 
 #ifdef CONFIG_MMC
 #define CONFIG_FASTBOOT_FLASH_MMC_DEV	0
+#define CONFIG_EFI_PARTITION_ENTRIES_OFF 1024000
+#define CONFIG_RANDOM_UUID
 #endif
 #endif
 
